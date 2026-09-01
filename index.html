@@ -3,42 +3,62 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#07090d">
-  <meta name="description" content="DTR POB Tracker – kompakte Live-Übersicht für vier Corsair-Basen.">
-  <title>DTR · POB Tracker</title>
+  <meta name="theme-color" content="#050506">
+  <meta name="description" content="DTR POB Tracker – Corsair Live-Telemetrie für vier POBs.">
+  <title>DTR // POB Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Oxanium:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
+  <div class="ambient-grid" aria-hidden="true"></div>
+
   <header class="topbar">
-    <div>
-      <p class="eyebrow">CORSAIR NETWORK // POB CONTROL</p>
-      <h1>DTR <span>POB TRACKER</span></h1>
+    <div class="brand-shell">
+      <div class="brand-sigil" aria-hidden="true"></div>
+      <div class="brand-copy">
+        <p class="eyebrow">CORSAIR SECURE NETWORK // DTR</p>
+        <h1><span class="brand-main">DTR</span><span class="brand-slash">//</span><span class="brand-sub">POB CONTROL</span></h1>
+        <div class="brand-meta">
+          <span>ENCRYPTED TELEMETRY</span>
+          <i></i>
+          <span>FOUR-NODE WATCH</span>
+          <i></i>
+          <span>LIVE DARKSTAT RELAY</span>
+        </div>
+      </div>
     </div>
 
     <div class="uplink" id="uplink">
       <span class="status-dot" aria-hidden="true"></span>
-      <div>
+      <div class="uplink-copy">
         <small>DARKSTAT UPLINK</small>
         <strong id="statusText">CONNECTING</strong>
       </div>
-      <button id="refreshButton" type="button">REFRESH</button>
+      <button id="refreshButton" type="button"><span>REFRESH</span></button>
     </div>
   </header>
 
+  <div class="transmission-rail" aria-hidden="true">
+    <span>NETWORK STATUS RECEIVED</span>
+  </div>
+
   <nav class="tabs" id="tabs" aria-label="POB navigation">
-    <button class="tab active" type="button" data-view="overview">ÜBERSICHT</button>
-    <button class="tab" type="button" data-view="deterrence-sanctum">DETERRENCE SANCTUM</button>
-    <button class="tab" type="button" data-view="ravenna-invicta">RAVENNA INVICTA</button>
-    <button class="tab" type="button" data-view="forja-del-vacio">FORJA DEL VACIO</button>
-    <button class="tab" type="button" data-view="fort-torrelavega">FORT TORRELAVEGA</button>
+    <button class="tab active" type="button" data-view="overview"><span>00</span>ÜBERSICHT</button>
+    <button class="tab" type="button" data-view="deterrence-sanctum"><span>01</span>DETERRENCE SANCTUM</button>
+    <button class="tab" type="button" data-view="ravenna-invicta"><span>02</span>RAVENNA INVICTA</button>
+    <button class="tab" type="button" data-view="forja-del-vacio"><span>03</span>FORJA DEL VACIO</button>
+    <button class="tab" type="button" data-view="fort-torrelavega"><span>04</span>FORT TORRELAVEGA</button>
   </nav>
 
-  <main>
+  <main class="command-frame">
     <section id="overviewView" class="view">
       <div class="section-head">
         <div>
-          <p class="section-kicker">NETWORK STATUS</p>
-          <h2>Vier Basen. Ein Blick.</h2>
+          <p class="section-kicker">CORSAIR BASE NETWORK</p>
+          <h2>Operational Overview</h2>
+          <p class="section-subline">Vier POBs // ein gemeinsames Kontrollbild</p>
         </div>
         <span class="last-sync" id="overviewSync">NO DATA</span>
       </div>
@@ -48,29 +68,34 @@
 
     <section id="detailView" class="view" hidden>
       <div class="base-hero">
-        <div>
+        <div class="base-hero-copy">
           <p class="section-kicker" id="detailKicker">POB DETAIL</p>
           <h2 id="detailName">—</h2>
           <p class="location-line" id="detailLocation">Awaiting telemetry</p>
         </div>
+        <div class="hero-sigil" aria-hidden="true"></div>
         <span class="health-badge" id="detailHealthBadge">—</span>
       </div>
 
       <div class="stat-grid">
         <article class="stat-card">
+          <span class="card-index">01</span>
           <small>STRUCTURAL INTEGRITY</small>
           <strong id="healthValue">—</strong>
           <div class="meter"><span id="healthMeter"></span></div>
         </article>
         <article class="stat-card">
+          <span class="card-index">02</span>
           <small>BASE CREDITS</small>
           <strong id="creditsValue">—</strong>
         </article>
         <article class="stat-card">
+          <span class="card-index">03</span>
           <small>FREE STORAGE</small>
           <strong id="storageValue">—</strong>
         </article>
         <article class="stat-card">
+          <span class="card-index">04</span>
           <small>LAST SYNC</small>
           <strong id="syncValue">—</strong>
         </article>
@@ -79,12 +104,13 @@
       <section class="inventory-panel">
         <div class="inventory-head">
           <div>
-            <p class="section-kicker">BASE INVENTORY</p>
-            <h3>Warenbestand</h3>
+            <p class="section-kicker">CARGO MANIFEST</p>
+            <h3>Base Inventory</h3>
+            <p class="section-subline">Live stock // local buy & sell quotations</p>
           </div>
           <label class="search">
             <span class="sr-only">Inventar durchsuchen</span>
-            <input id="inventorySearch" type="search" placeholder="Ware suchen…">
+            <input id="inventorySearch" type="search" placeholder="WARE SUCHEN…">
           </label>
         </div>
 
@@ -111,8 +137,13 @@
     </section>
   </main>
 
+  <div class="transmission-rail transmission-rail-end" aria-hidden="true">
+    <span>END OF SECURE FEED</span>
+  </div>
+
   <footer>
     <span>DTR // CORSAIR POB CONTROL</span>
+    <span class="footer-sigil" aria-hidden="true"></span>
     <span id="footerState">AWAITING TELEMETRY</span>
   </footer>
 
