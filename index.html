@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07090d">
+  <meta name="description" content="DTR POB Tracker – kompakte Live-Übersicht für vier Corsair-Basen.">
+  <title>DTR · POB Tracker</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">CORSAIR NETWORK // POB CONTROL</p>
+      <h1>DTR <span>POB TRACKER</span></h1>
+    </div>
+
+    <div class="uplink" id="uplink">
+      <span class="status-dot" aria-hidden="true"></span>
+      <div>
+        <small>DARKSTAT UPLINK</small>
+        <strong id="statusText">CONNECTING</strong>
+      </div>
+      <button id="refreshButton" type="button">REFRESH</button>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs" aria-label="POB navigation">
+    <button class="tab active" type="button" data-view="overview">ÜBERSICHT</button>
+    <button class="tab" type="button" data-view="deterrence-sanctum">DETERRENCE SANCTUM</button>
+    <button class="tab" type="button" data-view="ravenna-invicta">RAVENNA INVICTA</button>
+    <button class="tab" type="button" data-view="forja-del-vacio">FORJA DEL VACIO</button>
+    <button class="tab" type="button" data-view="fort-torrelavega">FORT TORRELAVEGA</button>
+  </nav>
+
+  <main>
+    <section id="overviewView" class="view">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">NETWORK STATUS</p>
+          <h2>Vier Basen. Ein Blick.</h2>
+        </div>
+        <span class="last-sync" id="overviewSync">NO DATA</span>
+      </div>
+
+      <div class="overview-grid" id="overviewGrid"></div>
+    </section>
+
+    <section id="detailView" class="view" hidden>
+      <div class="base-hero">
+        <div>
+          <p class="section-kicker" id="detailKicker">POB DETAIL</p>
+          <h2 id="detailName">—</h2>
+          <p class="location-line" id="detailLocation">Awaiting telemetry</p>
+        </div>
+        <span class="health-badge" id="detailHealthBadge">—</span>
+      </div>
+
+      <div class="stat-grid">
+        <article class="stat-card">
+          <small>STRUCTURAL INTEGRITY</small>
+          <strong id="healthValue">—</strong>
+          <div class="meter"><span id="healthMeter"></span></div>
+        </article>
+        <article class="stat-card">
+          <small>BASE CREDITS</small>
+          <strong id="creditsValue">—</strong>
+        </article>
+        <article class="stat-card">
+          <small>FREE STORAGE</small>
+          <strong id="storageValue">—</strong>
+        </article>
+        <article class="stat-card">
+          <small>LAST SYNC</small>
+          <strong id="syncValue">—</strong>
+        </article>
+      </div>
+
+      <section class="inventory-panel">
+        <div class="inventory-head">
+          <div>
+            <p class="section-kicker">BASE INVENTORY</p>
+            <h3>Warenbestand</h3>
+          </div>
+          <label class="search">
+            <span class="sr-only">Inventar durchsuchen</span>
+            <input id="inventorySearch" type="search" placeholder="Ware suchen…">
+          </label>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>WARE</th>
+                <th>MENGE</th>
+                <th>BASE KAUFT</th>
+                <th>BASE VERKAUFT</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryBody"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="inventoryEmpty" hidden>Keine passende Ware gefunden.</div>
+      </section>
+    </section>
+
+    <section id="errorView" class="error-box" hidden>
+      <strong>UPLINK FEHLER</strong>
+      <span id="errorText">Darkstat konnte nicht erreicht werden.</span>
+    </section>
+  </main>
+
+  <footer>
+    <span>DTR // CORSAIR POB CONTROL</span>
+    <span id="footerState">AWAITING TELEMETRY</span>
+  </footer>
+
+  <script src="./app.js"></script>
+</body>
+</html>
