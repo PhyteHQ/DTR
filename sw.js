@@ -1,11 +1,10 @@
 /* DTR POB Network · RHW-style install/offline shell.
    App assets are available offline. Darkstat telemetry remains network-only. */
 const CACHE_PREFIX='dtr-pob-network-pwa-';
-const CACHE_NAME=`${CACHE_PREFIX}2026-09-01-pwa-2`;
+const CACHE_NAME=`${CACHE_PREFIX}2026-09-01-pwa-3`;
 const APP_SHELL=[
   './','./index.html','./styles.css','./enhancements.css','./app.js','./enhancements.js','./manifest.webmanifest',
-  './assets/dtr-sigil.jpg','./assets/favicon-64.png','./assets/apple-touch-icon.png',
-  './assets/icon-192.png','./assets/icon-512.png','./assets/icon-maskable-512.png'
+  './assets/favicon-64.png','./assets/apple-touch-icon.png','./assets/icon-192.png','./assets/icon-512.png','./assets/icon-maskable-512.png'
 ];
 
 self.addEventListener('install',event=>{
