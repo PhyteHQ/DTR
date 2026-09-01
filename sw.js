@@ -1,9 +1,9 @@
 /* DTR POB Network · offline shell + visible UPDATE NOW flow.
    App assets are available offline. Darkstat telemetry remains network-only. */
 const CACHE_PREFIX='dtr-pob-network-pwa-';
-const CACHE_NAME=`${CACHE_PREFIX}2026-09-02-pwa-5`;
+const CACHE_NAME=`${CACHE_PREFIX}2026-09-02-pwa-6`;
 const APP_SHELL=[
-  './','./index.html','./styles.css','./enhancements.css','./dtr-quality.css','./app.js','./enhancements.js','./dtr-quality.js','./dtr-pwa-updates.js','./manifest.webmanifest',
+  './','./index.html','./styles.css','./enhancements.css','./dtr-quality.css','./dtr-uplink.css','./app.js','./enhancements.js','./dtr-quality.js','./dtr-uplink.js','./dtr-pwa-updates.js','./manifest.webmanifest',
   './assets/favicon-64.png','./assets/apple-touch-icon.png','./assets/icon-192.png','./assets/icon-512.png','./assets/icon-maskable-512.png'
 ];
 
