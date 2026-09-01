@@ -5,7 +5,7 @@
 
   const FINGERPRINT_KEY='dtr:pwa:shell-fingerprint:v1';
   const CACHE_PREFIX='dtr-pob-network-pwa-';
-  const PROBE_ASSETS=['./index.html','./styles.css','./enhancements.css','./dtr-quality.css','./app.js','./enhancements.js','./dtr-quality.js','./dtr-pwa-updates.js','./manifest.webmanifest','./sw.js'];
+  const PROBE_ASSETS=['./index.html','./styles.css','./enhancements.css','./dtr-quality.css','./dtr-uplink.css','./app.js','./enhancements.js','./dtr-quality.js','./dtr-uplink.js','./dtr-pwa-updates.js','./manifest.webmanifest','./sw.js'];
   const state={registration:null,pendingFingerprint:'',checking:false,dismissed:false,applying:false};
   const $=id=>document.getElementById(id);
 
