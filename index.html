@@ -2,10 +2,15 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#050506">
-  <meta name="description" content="DTR POB Tracker – Corsair Live-Telemetrie für vier POBs.">
-  <title>DTR // POB Control</title>
+  <meta name="description" content="DTR Corsair POB Network Control">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DTR Control">
+  <title>DTR // POB Network</title>
+  <link rel="manifest" href="./manifest.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Oxanium:wght@500;600;700&display=swap" rel="stylesheet">
@@ -13,146 +18,101 @@
 </head>
 <body>
   <div class="ambient-grid" aria-hidden="true"></div>
+  <div class="offline-banner" id="offlineBanner" hidden><strong>OFFLINE MODE</strong><span>LAST VERIFIED CACHE // LIVE TELEMETRY PAUSED</span></div>
 
   <header class="topbar">
     <div class="brand-shell">
       <div class="brand-sigil" aria-hidden="true"></div>
       <div class="brand-copy">
         <p class="eyebrow">CORSAIR SECURE NETWORK // DTR</p>
-        <h1><span class="brand-main">DTR</span><span class="brand-slash">//</span><span class="brand-sub">POB CONTROL</span></h1>
-        <div class="brand-meta">
-          <span>ENCRYPTED TELEMETRY</span>
-          <i></i>
-          <span>FOUR-NODE WATCH</span>
-          <i></i>
-          <span>LIVE DARKSTAT RELAY</span>
-        </div>
+        <h1><span class="brand-main">DTR</span><span class="brand-slash">//</span><span class="brand-sub">POB NETWORK</span></h1>
+        <div class="brand-meta"><span id="headerFreshness">AWAITING TELEMETRY</span><i></i><span id="headerClock">--:--:--</span></div>
       </div>
     </div>
-
-    <div class="uplink" id="uplink">
-      <span class="status-dot" aria-hidden="true"></span>
-      <div class="uplink-copy">
-        <small>DARKSTAT UPLINK</small>
-        <strong id="statusText">CONNECTING</strong>
-      </div>
-      <button id="refreshButton" type="button"><span>REFRESH</span></button>
+    <div class="header-actions">
+      <div class="uplink" id="uplink"><span class="status-dot" aria-hidden="true"></span><div class="uplink-copy"><small>DARKSTAT UPLINK</small><strong id="statusText">CONNECTING</strong></div><button id="refreshButton" type="button">REFRESH</button></div>
+      <button class="system-button" id="systemButton" type="button" aria-haspopup="dialog" aria-controls="systemPanel"><span>SYSTEM</span><small>APP STATUS</small></button>
+      <button class="install-button" id="installButton" type="button"><span>INSTALL</span><small>PHONE APP</small></button>
     </div>
   </header>
 
-  <div class="transmission-rail" aria-hidden="true">
-    <span>NETWORK STATUS RECEIVED</span>
-  </div>
-
+  <div class="transmission-rail" aria-hidden="true"><span>NETWORK STATUS RECEIVED</span></div>
   <nav class="tabs" id="tabs" aria-label="POB navigation">
-    <button class="tab active" type="button" data-view="overview"><span>00</span>ÜBERSICHT</button>
-    <button class="tab" type="button" data-view="deterrence-sanctum"><span>01</span>DETERRENCE SANCTUM</button>
-    <button class="tab" type="button" data-view="ravenna-invicta"><span>02</span>RAVENNA INVICTA</button>
-    <button class="tab" type="button" data-view="forja-del-vacio"><span>03</span>FORJA DEL VACIO</button>
-    <button class="tab" type="button" data-view="fort-torrelavega"><span>04</span>FORT TORRELAVEGA</button>
+    <button class="tab active" type="button" data-view="overview"><span>00</span>ALL NODES</button>
+    <button class="tab" type="button" data-view="deterrence-sanctum"><span>01</span>SANCTUM</button>
+    <button class="tab" type="button" data-view="ravenna-invicta"><span>02</span>INVICTA</button>
+    <button class="tab" type="button" data-view="forja-del-vacio"><span>03</span>FORJA</button>
+    <button class="tab" type="button" data-view="fort-torrelavega"><span>04</span>TORRELAVEGA</button>
   </nav>
 
   <main class="command-frame">
     <section id="overviewView" class="view">
-      <div class="section-head">
-        <div>
-          <p class="section-kicker">CORSAIR BASE NETWORK</p>
-          <h2>Operational Overview</h2>
-          <p class="section-subline">Vier POBs // ein gemeinsames Kontrollbild</p>
-        </div>
-        <span class="last-sync" id="overviewSync">NO DATA</span>
+      <div class="network-hero">
+        <div class="network-identity"><p class="section-kicker">CORSAIR BASE NETWORK</p><h2>Operational Overview</h2><p class="section-subline">Four POB nodes // maintenance // reserves // movement</p></div>
+        <div class="network-state" id="networkState"><i></i><div><small>NETWORK STATE</small><strong>AWAITING DATA</strong></div></div>
       </div>
-
-      <div class="overview-grid" id="overviewGrid"></div>
+      <div class="network-metrics">
+        <article><small>NODES ONLINE</small><strong id="metricNodes">—</strong><span id="metricNodesSub">NO VERIFIED FEED</span></article>
+        <article><small>TOTAL CREDITS</small><strong id="metricCredits">—</strong><span id="metricCreditsDelta">NO BASELINE</span></article>
+        <article><small>TOTAL FREE STORAGE</small><strong id="metricStorage">—</strong><span id="metricStorageDelta">NO BASELINE</span></article>
+        <article><small>ACTIVE ALERTS</small><strong id="metricAlerts">—</strong><span id="metricAlertsSub">MAINTENANCE + HEALTH</span></article>
+      </div>
+      <section class="overview-section">
+        <div class="section-head compact"><div><p class="section-kicker">NODE CONTROL</p><h3>POB Status</h3></div><span class="freshness-chip" id="overviewSync">NO DATA</span></div>
+        <div class="overview-grid" id="overviewGrid"></div>
+      </section>
+      <section class="matrix-panel">
+        <div class="section-head compact"><div><p class="section-kicker">CROSS-POB RESERVE MAP</p><h3>Network Matrix</h3><p class="section-subline">Facility maintenance + watched cargo across every node</p></div><span class="matrix-hint">TAP A CELL TO OPEN</span></div>
+        <div class="matrix-wrap" id="networkMatrix"></div>
+      </section>
     </section>
 
     <section id="detailView" class="view" hidden>
       <div class="base-hero">
-        <div class="base-hero-copy">
-          <p class="section-kicker" id="detailKicker">POB DETAIL</p>
-          <h2 id="detailName">—</h2>
-          <p class="location-line" id="detailLocation">Awaiting telemetry</p>
-        </div>
-        <div class="hero-sigil" aria-hidden="true"></div>
-        <span class="health-badge" id="detailHealthBadge">—</span>
+        <div class="base-hero-copy"><p class="section-kicker" id="detailKicker">POB DETAIL</p><h2 id="detailName">—</h2><p class="location-line" id="detailLocation">Awaiting telemetry</p><div class="hero-delta" id="detailDelta">NO BASELINE SNAPSHOT</div></div>
+        <div class="hero-sigil" aria-hidden="true"></div><span class="health-badge" id="detailHealthBadge">—</span>
       </div>
-
       <div class="stat-grid">
-        <article class="stat-card">
-          <span class="card-index">01</span>
-          <small>STRUCTURAL INTEGRITY</small>
-          <strong id="healthValue">—</strong>
-          <div class="meter"><span id="healthMeter"></span></div>
-        </article>
-        <article class="stat-card">
-          <span class="card-index">02</span>
-          <small>BASE CREDITS</small>
-          <strong id="creditsValue">—</strong>
-        </article>
-        <article class="stat-card">
-          <span class="card-index">03</span>
-          <small>FREE STORAGE</small>
-          <strong id="storageValue">—</strong>
-        </article>
-        <article class="stat-card">
-          <span class="card-index">04</span>
-          <small>LAST SYNC</small>
-          <strong id="syncValue">—</strong>
-        </article>
+        <article class="stat-card"><span class="card-index">01</span><small>STRUCTURAL INTEGRITY</small><strong id="healthValue">—</strong><span class="delta" id="healthDelta">—</span><div class="meter"><span id="healthMeter"></span></div></article>
+        <article class="stat-card"><span class="card-index">02</span><small>BASE CREDITS</small><strong id="creditsValue">—</strong><span class="delta" id="creditsDelta">—</span></article>
+        <article class="stat-card"><span class="card-index">03</span><small>FREE STORAGE</small><strong id="storageValue">—</strong><span class="delta" id="storageDelta">—</span></article>
+        <article class="stat-card"><span class="card-index">04</span><small>LAST VERIFIED SYNC</small><strong id="syncValue">—</strong><span class="delta" id="syncMode">—</span></article>
       </div>
-
+      <div class="detail-columns">
+        <section class="maintenance-panel">
+          <div class="section-head compact"><div><p class="section-kicker">FACILITY MAINTENANCE</p><h3>Daily Operating Reserves</h3><p class="section-subline">Basic Alloy // Food Rations // Consumer Goods</p></div><span class="facility-state" id="facilityState">CHECKING</span></div>
+          <div class="maintenance-grid" id="maintenanceGrid"></div>
+        </section>
+        <section class="priority-panel">
+          <div class="section-head compact"><div><p class="section-kicker">PRIORITY FEED</p><h3>Attention Required</h3></div><span class="alert-count" id="priorityCount">0 ALERTS</span></div>
+          <div class="priority-list" id="priorityList"></div>
+        </section>
+      </div>
+      <section class="watch-panel">
+        <div class="section-head compact"><div><p class="section-kicker">WATCHED CARGO</p><h3>Quick Reserves</h3><p class="section-subline">Star commodities in the manifest to pin them here and into the network matrix</p></div><span class="watch-count" id="watchCount">0 WATCHED</span></div>
+        <div class="watch-grid" id="watchGrid"></div>
+      </section>
       <section class="inventory-panel">
         <div class="inventory-head">
-          <div>
-            <p class="section-kicker">CARGO MANIFEST</p>
-            <h3>Base Inventory</h3>
-            <p class="section-subline">Live stock // local buy & sell quotations</p>
-          </div>
-          <label class="search">
-            <span class="sr-only">Inventar durchsuchen</span>
-            <input id="inventorySearch" type="search" placeholder="WARE SUCHEN…">
-          </label>
+          <div><p class="section-kicker">CARGO MANIFEST</p><h3>Base Inventory</h3><p class="section-subline">Live stock // quotations // watch controls</p></div>
+          <div class="inventory-tools"><div class="filter-segments" id="inventoryFilters"><button class="active" data-filter="all" type="button">ALL</button><button data-filter="watch" type="button">WATCHED</button><button data-filter="buy" type="button">BASE BUYS</button><button data-filter="sell" type="button">BASE SELLS</button></div><label class="search"><span class="sr-only">Inventar durchsuchen</span><input id="inventorySearch" type="search" placeholder="WARE SUCHEN…"></label></div>
         </div>
-
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>WARE</th>
-                <th>MENGE</th>
-                <th>BASE KAUFT</th>
-                <th>BASE VERKAUFT</th>
-              </tr>
-            </thead>
-            <tbody id="inventoryBody"></tbody>
-          </table>
-        </div>
+        <div class="table-wrap"><table><thead><tr><th>WATCH</th><th>WARE</th><th>MENGE</th><th>BASE KAUFT</th><th>BASE VERKAUFT</th><th>Δ STOCK</th></tr></thead><tbody id="inventoryBody"></tbody></table></div>
         <div class="empty-state" id="inventoryEmpty" hidden>Keine passende Ware gefunden.</div>
       </section>
     </section>
-
-    <section id="errorView" class="error-box" hidden>
-      <strong>UPLINK FEHLER</strong>
-      <span id="errorText">Darkstat konnte nicht erreicht werden.</span>
-    </section>
+    <section id="errorView" class="error-box" hidden><strong>UPLINK NOTICE</strong><span id="errorText">Darkstat konnte nicht erreicht werden.</span></section>
   </main>
 
-  <div class="transmission-rail transmission-rail-end" aria-hidden="true">
-    <span>END OF SECURE FEED</span>
-  </div>
+  <div class="transmission-rail transmission-rail-end" aria-hidden="true"><span>END OF SECURE FEED</span></div>
+  <footer><span>DTR // CORSAIR POB NETWORK</span><span class="footer-sigil" aria-hidden="true"></span><span id="footerState">AWAITING TELEMETRY</span></footer>
 
-  <footer>
-    <span>DTR // CORSAIR POB CONTROL</span>
-    <span class="footer-sigil" aria-hidden="true"></span>
-    <span id="footerState">AWAITING TELEMETRY</span>
-  </footer>
+  <aside class="system-overlay" id="systemPanel" role="dialog" aria-modal="true" aria-labelledby="systemTitle" hidden>
+    <section class="system-sheet"><header><div><small>DTR NETWORK DIAGNOSTICS</small><strong id="systemTitle">SYSTEM CHECK</strong></div><button id="systemClose" type="button">CLOSE</button></header><div class="system-overall" id="systemOverall"><i></i><div><strong>CHECKING</strong><span>Collecting app status.</span></div></div><div class="system-grid" id="systemGrid"></div><div class="system-actions"><button id="systemRefresh" type="button">RUN CHECK</button><button id="systemInstall" type="button">INSTALL APP</button></div></section>
+  </aside>
+  <aside class="install-sheet" id="installSheet" role="dialog" aria-modal="true" hidden><div><small>DTR COMMAND APP</small><strong id="installTitle">INSTALL ON THIS DEVICE</strong><span id="installMessage">Add DTR to your home screen.</span></div><div class="install-actions"><button id="installPrimary" type="button">INSTALL</button><button id="installClose" type="button">LATER</button></div></aside>
 
-  <script>
-    fetch('./assets/dtr-sigil-256.b64')
-      .then(response => response.ok ? response.text() : Promise.reject(new Error('sigil unavailable')))
-      .then(base64 => document.documentElement.style.setProperty('--sigil', `url("data:image/jpeg;base64,${base64.trim()}")`))
-      .catch(() => {});
-  </script>
+  <script>fetch('./assets/dtr-sigil-256.b64').then(r=>r.ok?r.text():Promise.reject()).then(b64=>document.documentElement.style.setProperty('--sigil',`url("data:image/jpeg;base64,${b64.trim()}")`)).catch(()=>{});</script>
   <script src="./app.js"></script>
 </body>
 </html>
