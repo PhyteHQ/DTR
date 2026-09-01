@@ -1,0 +1,11 @@
+{
+  "name": "DTR POB Network Control",
+  "short_name": "DTR Control",
+  "description": "Corsair POB telemetry and facility maintenance control.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#050506",
+  "theme_color": "#050506",
+  "orientation": "any"
+}
