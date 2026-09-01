@@ -1,40 +1,44 @@
-# DTR POB Tracker
+# DTR POB Network Control
 
-Schlanke statische GitHub-Pages-Seite für vier DTR/Corsair POBs:
+Schlanke Corsair-Kontrollseite für vier DTR-POBs:
 
 - Deterrence Sanctum
 - Ravenna Invicta
 - Forja del Vacio
 - Fort Torrelavega
 
-## Datenquelle
+Live-Daten: `POST https://darkstat.dd84ai.com/api/pobs`
 
-Live-POB-Daten werden direkt von Darkstat geladen:
+## Aktuelle Grundstruktur
 
-`POST https://darkstat.dd84ai.com/api/pobs`
+- Network Overview für alle vier Nodes
+- Health, Credits, freier Storage und Standortdaten
+- Facility Maintenance pro POB: Basic Alloy, Food Rations, Consumer Goods
+- Maintenance-Status mit Reserve-Warnungen
+- Priority Feed für Health- und Maintenance-Probleme
+- Veränderungen gegenüber dem vorherigen Live-Snapshot
+- Watchlist für frei wählbare Commodities
+- Cross-POB Network Matrix für Maintenance + Watchlist
+- Cargo Manifest mit Suche sowie Buy/Sell/Watch-Filtern
+- Last-Good-Cache und klarer LIVE/CACHE/OFFLINE-Status
+- installierbare PWA / Offline-App-Shell
+- kompakter System Check für Netzwerk, Darkstat, POB-Auflösung, Local Storage und PWA
+- responsive Mobile-Oberfläche
 
-Die Seite nutzt nur HTML, CSS und Vanilla JavaScript. Es gibt keinen Server, keine Datenbank und kein Login.
+## Facility Maintenance
 
-## Funktionen
+Die drei Grundversorgungen sind bewusst Teil der Core-POB-Ansicht und nicht des späteren Produktionssystems:
 
-- Übersicht aller vier POBs
-- POB-Tabs mit identischer Detailansicht
-- Health, Credits, freier Storage, System/Region/Sector/Position
-- komplettes POB-Inventar
-- Base-buy/Base-sell-Preise
-- Inventarsuche
-- 5-Minuten-Autorefresh + manueller Refresh
-- Last-Good-Cache im Browser, falls Darkstat kurz ausfällt
-- responsive Mobile-Ansicht
+- Basic Alloy
+- Food Rations
+- Consumer Goods
+
+Aktuelle Reserve-Ampel: kritisch unter 2.500, niedrig unter 15.000, ansonsten operational.
+
+## Noch nicht Teil der Grundstruktur
+
+Produktionslinien, Rezepte und POB-spezifische Produktionslogik werden erst nach gemeinsamer Definition je POB ergänzt. Calculator-, Forum-/BBCode- und RHW-Comms-Funktionen sind für DTR derzeit ausdrücklich nicht vorgesehen.
 
 ## GitHub Pages
 
-Repository öffentlich anlegen, Dateien in `main` legen und unter:
-
-`Settings -> Pages -> Deploy from a branch -> main / (root)`
-
-aktivieren.
-
-Bei einem Repo `PhyteHQ/DTR` lautet die Seite anschließend:
-
-`https://phytehq.github.io/DTR/`
+Live: `https://phytehq.github.io/DTR/`
