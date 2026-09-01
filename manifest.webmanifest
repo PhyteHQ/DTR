@@ -1,15 +1,24 @@
 {
+  "id": "./",
   "name": "DTR POB Network Control",
   "short_name": "DTR Control",
-  "description": "Corsair POB telemetry and facility maintenance control.",
-  "id": "./",
+  "description": "Corsair POB telemetry, facility maintenance and reserve control.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone"],
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
   "background_color": "#050506",
   "theme_color": "#050506",
   "orientation": "any",
+  "categories": [
+    "business",
+    "productivity",
+    "utilities"
+  ],
   "icons": [
     {
       "src": "./assets/icon-192.png",
@@ -30,6 +39,5 @@
       "purpose": "maskable"
     }
   ],
-  "categories": ["utilities", "productivity"],
   "prefer_related_applications": false
 }
