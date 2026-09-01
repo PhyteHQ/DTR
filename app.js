@@ -1,0 +1,41 @@
+(()=>{'use strict';
+const API='https://darkstat.dd84ai.com/api/pobs',HEALTH_MAX=24000000,CACHE='dtr:pobs:last-good:v1',REFRESH=300000;
+const POBS=[
+ {key:'deterrence-sanctum',label:'Deterrence Sanctum',aliases:['deterrence sanctum']},
+ {key:'ravenna-invicta',label:'Ravenna Invicta',aliases:['ravenna invicta','invicta']},
+ {key:'forja-del-vacio',label:'Forja del Vacio',aliases:['forja del vacio','forja del vacío']},
+ {key:'fort-torrelavega',label:'Fort Torrelavega',aliases:['fort torrelavega','torrelavega']}
+];
+const $=id=>document.getElementById(id),E={uplink:$('uplink'),status:$('statusText'),refresh:$('refreshButton'),tabs:$('tabs'),overview:$('overviewView'),detail:$('detailView'),grid:$('overviewGrid'),overviewSync:$('overviewSync'),kicker:$('detailKicker'),name:$('detailName'),location:$('detailLocation'),badge:$('detailHealthBadge'),health:$('healthValue'),meter:$('healthMeter'),credits:$('creditsValue'),storage:$('storageValue'),sync:$('syncValue'),search:$('inventorySearch'),body:$('inventoryBody'),empty:$('inventoryEmpty'),error:$('errorView'),errorText:$('errorText'),footer:$('footerState')};
+let data=[],bases=new Map(),view='overview',last=null,mode='none',timer=null;
+const num=new Intl.NumberFormat('de-DE'),cash=v=>Number.isFinite(v)?`${num.format(v)} cr`:'—';
+const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+const n=v=>{const x=Number(v);return Number.isFinite(x)?x:null};
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function find(def){const a=def.aliases.map(norm);return data.find(b=>{const h=norm([b?.name,b?.nickname,b?.base_name,b?.display_name].filter(Boolean).join(' '));return a.some(x=>h===x||h.includes(x))})||null}
+function rebuild(){bases=new Map(POBS.map(p=>[p.key,find(p)]))}
+function hp(b){const raw=n(b?.health??b?.base_health??b?.hitpoints);if(raw===null)return null;return Math.max(0,Math.min(100,raw<=100?raw:raw/HEALTH_MAX*100))}
+function hpText(b){const x=hp(b);return x===null?'—':`${x>=99.95?x.toFixed(0):x.toFixed(1)}%`}
+function tone(b){const x=hp(b);return x===null?'':x<35?'bad':x<75?'warn':''}
+function credits(b){return cash(n(b?.money??b?.credits??b?.base_money))}
+function storage(b){const x=n(b?.cargospace??b?.cargo_space??b?.cargo_space_left??b?.storage_free);return x===null?'—':num.format(x)}
+function loc(b){if(!b)return'POB NOT FOUND IN CURRENT FEED';const pos=b?.pos??b?.base_pos??b?.position;let p='';if(typeof pos==='string')p=pos;else if(pos&&typeof pos==='object'){const vals=[n(pos.x??pos.X),n(pos.y??pos.Y),n(pos.z??pos.Z)].filter(x=>x!==null);if(vals.length)p=vals.map(Math.round).join(' / ')}return[b?.region_name??b?.region,b?.system_name??b?.system,b?.sector_coord??b?.sector,p].map(x=>String(x??'').trim()).filter(Boolean).join(' // ')||'LOCATION DATA UNAVAILABLE'}
+function items(b){const x=b?.shop_items??b?.shopItems??b?.goods??[];return Array.isArray(x)?x:[]}
+function itemName(i){return String(i?.name??i?.good_name??i?.commodity_name??i?.nickname??i?.good??'UNKNOWN ITEM')}
+function qty(i){return n(i?.quantity??i?.amount??i?.stock)??0}
+function buy(i){return n(i?.price_to_sell_to_base??i?.sell_price??i?.price_sell)}
+function sell(i){return n(i?.price_to_buy_from_base??i?.buy_price??i?.price_buy)}
+function price(v){return v===null?'—':`${num.format(v)} cr`}
+function syncText(){if(!last)return'NO DATA';return`${mode==='cache'?'CACHE':'LIVE'} // ${last.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}`}
+function status(state,text){E.uplink.dataset.state=state;E.status.textContent=text;E.footer.textContent=text}
+function renderOverview(){E.overviewSync.textContent=syncText();E.grid.innerHTML=POBS.map(p=>{const b=bases.get(p.key);if(!b)return`<article class="base-card" data-base-key="${p.key}" data-state="missing" tabindex="0" role="button"><div class="base-card-head"><div><h3>${esc(p.label)}</h3><p class="where">POB nicht im aktuellen Feed gefunden</p></div><span class="health-pill bad">OFFLINE</span></div><div class="mini-stat"><small>CREDITS</small><strong>—</strong></div><div class="mini-stat"><small>FREE STORAGE</small><strong>—</strong></div></article>`;return`<article class="base-card" data-base-key="${p.key}" tabindex="0" role="button"><div class="base-card-head"><div><h3>${esc(p.label)}</h3><p class="where">${esc(loc(b))}</p></div><span class="health-pill ${tone(b)}">${hpText(b)}</span></div><div class="mini-stat"><small>CREDITS</small><strong>${esc(credits(b))}</strong></div><div class="mini-stat"><small>FREE STORAGE</small><strong>${esc(storage(b))}</strong></div></article>`}).join('')}
+function renderItems(b){const q=norm(E.search.value),list=items(b).filter(i=>!q||norm(itemName(i)).includes(q)).sort((a,b)=>itemName(a).localeCompare(itemName(b),'de'));E.body.innerHTML=list.map(i=>`<tr><td class="item-name">${esc(itemName(i))}</td><td>${num.format(qty(i))}</td><td class="muted">${esc(price(buy(i)))}</td><td class="muted">${esc(price(sell(i)))}</td></tr>`).join('');E.empty.hidden=list.length>0}
+function renderDetail(key){const def=POBS.find(p=>p.key===key),b=bases.get(key);E.kicker.textContent=`POB DETAIL // ${mode==='cache'?'CACHED':'LIVE'}`;E.name.textContent=def?.label??'UNKNOWN POB';E.location.textContent=loc(b);E.sync.textContent=syncText();if(!b){E.badge.className='health-badge bad';E.badge.textContent='OFFLINE';E.health.textContent='—';E.meter.style.width='0';E.credits.textContent='—';E.storage.textContent='—';renderItems(null);return}const x=hp(b),t=tone(b);E.badge.className=`health-badge ${t}`.trim();E.badge.textContent=hpText(b);E.health.textContent=hpText(b);E.meter.style.width=`${x??0}%`;E.meter.style.background=t==='bad'?'var(--bad)':t==='warn'?'var(--warn)':'var(--good)';E.credits.textContent=credits(b);E.storage.textContent=storage(b);renderItems(b)}
+function render(){renderOverview();const d=view!=='overview';E.overview.hidden=d;E.detail.hidden=!d;if(d)renderDetail(view)}
+function show(next){view=next;E.tabs.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.view===next));E.search.value='';render();scrollTo({top:0,behavior:'smooth'})}
+function save(){try{localStorage.setItem(CACHE,JSON.stringify({savedAt:new Date().toISOString(),data}))}catch{}}
+function cache(){try{const c=JSON.parse(localStorage.getItem(CACHE)||'null');if(!Array.isArray(c?.data))return false;data=c.data;last=c.savedAt?new Date(c.savedAt):new Date;mode='cache';rebuild();status('cache','CACHED DATA');render();return true}catch{return false}}
+async function request(){const c=new AbortController,t=setTimeout(()=>c.abort(),18000);try{return await fetch(API,{method:'POST',headers:{Accept:'application/json'},signal:c.signal})}finally{clearTimeout(t)}}
+async function load(){if(timer)clearTimeout(timer);E.refresh.disabled=true;E.error.hidden=true;status('loading','SYNCING');try{const r=await request();if(!r.ok)throw new Error(`Darkstat HTTP ${r.status}`);const x=await r.json();if(!Array.isArray(x))throw new Error('Ungültige POB-Antwort');data=x;last=new Date;mode='live';rebuild();save();const found=POBS.filter(p=>bases.get(p.key)).length;status('live',`${found}/4 POBS LIVE`);render()}catch(err){if(cache()){E.error.hidden=false;E.errorText.textContent='Live-Uplink fehlgeschlagen. Letzte gespeicherte Daten werden angezeigt.'}else{mode='none';status('error','UPLINK FAILED');E.error.hidden=false;E.errorText.textContent=err?.name==='AbortError'?'Darkstat Timeout nach 18 Sekunden.':String(err?.message||'Darkstat nicht erreichbar.');render()}}finally{E.refresh.disabled=false;timer=setTimeout(load,REFRESH)}}
+E.tabs.addEventListener('click',e=>{const b=e.target.closest('.tab');if(b)show(b.dataset.view)});E.grid.addEventListener('click',e=>{const c=e.target.closest('[data-base-key]');if(c)show(c.dataset.baseKey)});E.grid.addEventListener('keydown',e=>{if(!['Enter',' '].includes(e.key))return;const c=e.target.closest('[data-base-key]');if(c){e.preventDefault();show(c.dataset.baseKey)}});E.search.addEventListener('input',()=>view!=='overview'&&renderDetail(view));E.refresh.addEventListener('click',load);addEventListener('online',load);addEventListener('offline',()=>cache()?null:status('error','OFFLINE'));render();load();
+})();
