@@ -147,6 +147,12 @@
     <span id="footerState">AWAITING TELEMETRY</span>
   </footer>
 
+  <script>
+    fetch('./assets/dtr-sigil-base64.txt')
+      .then(response => response.ok ? response.text() : Promise.reject(new Error('sigil unavailable')))
+      .then(base64 => document.documentElement.style.setProperty('--sigil', `url("data:image/jpeg;base64,${base64.trim()}")`))
+      .catch(() => {});
+  </script>
   <script src="./app.js"></script>
 </body>
 </html>
