@@ -22,6 +22,7 @@ function addScript(id,src,guard){if(guard()||document.querySelector(`script[data
 function loadSupportLayer(){
   addStyle('dtrQuality','./dtr-quality.css');
   addStyle('dtrUplink','./dtr-uplink.css');
+  addScript('dtrPwaInstall','./dtr-pwa-install.js',()=>Boolean(window.DTRPWAInstall));
   addScript('dtrPwaUpdates','./dtr-pwa-updates.js',()=>Boolean(window.DTRPWAUpdates));
   addScript('dtrQuality','./dtr-quality.js',()=>Boolean(window.DTRQuality));
   addScript('dtrUplink','./dtr-uplink.js',()=>Boolean(window.DTRUplink));
