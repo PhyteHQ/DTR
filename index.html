@@ -148,7 +148,7 @@
   </footer>
 
   <script>
-    fetch('./assets/dtr-sigil-base64.txt')
+    fetch('./assets/dtr-sigil-256.b64')
       .then(response => response.ok ? response.text() : Promise.reject(new Error('sigil unavailable')))
       .then(base64 => document.documentElement.style.setProperty('--sigil', `url("data:image/jpeg;base64,${base64.trim()}")`))
       .catch(() => {});
