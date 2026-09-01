@@ -1,9 +1,9 @@
-/* DTR POB Network · RHW-style install/offline shell.
+/* DTR POB Network · offline shell + visible UPDATE NOW flow.
    App assets are available offline. Darkstat telemetry remains network-only. */
 const CACHE_PREFIX='dtr-pob-network-pwa-';
-const CACHE_NAME=`${CACHE_PREFIX}2026-09-01-pwa-3`;
+const CACHE_NAME=`${CACHE_PREFIX}2026-09-01-pwa-4`;
 const APP_SHELL=[
-  './','./index.html','./styles.css','./enhancements.css','./app.js','./enhancements.js','./manifest.webmanifest',
+  './','./index.html','./styles.css','./enhancements.css','./app.js','./enhancements.js','./dtr-pwa-updates.js','./manifest.webmanifest',
   './assets/favicon-64.png','./assets/apple-touch-icon.png','./assets/icon-192.png','./assets/icon-512.png','./assets/icon-maskable-512.png'
 ];
 
@@ -11,6 +11,8 @@ self.addEventListener('install',event=>{
   event.waitUntil((async()=>{
     const cache=await caches.open(CACHE_NAME);
     await cache.addAll(APP_SHELL);
+    /* Bootstrap the update-aware shell immediately. Future app changes are
+       surfaced to the user by the DTR UPDATE NOW controller. */
     await self.skipWaiting();
   })());
 });
@@ -30,7 +32,7 @@ self.addEventListener('message',event=>{
 async function networkFirst(request,fallback){
   const cache=await caches.open(CACHE_NAME);
   try{
-    const response=await fetch(request);
+    const response=await fetch(request,{cache:'no-store'});
     if(!response.ok)throw new Error(`NETWORK RESPONSE ${response.status}`);
     await cache.put(request,response.clone());
     return response;
@@ -54,6 +56,13 @@ self.addEventListener('fetch',event=>{
   const request=event.request;
   if(request.method!=='GET')return;
   const url=new URL(request.url);
+
+  /* Update probes must bypass the app cache so DTR can compare the running
+     shell with the newest GitHub Pages deployment. */
+  if(url.origin===self.location.origin&&url.searchParams.has('dtr_update_probe')){
+    event.respondWith(fetch(request,{cache:'no-store'}));
+    return;
+  }
 
   if(request.mode==='navigate'){
     event.respondWith(networkFirst(request,'./index.html'));
