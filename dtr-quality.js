@@ -4,13 +4,7 @@
   if(window.DTRQuality)return;
 
   const META=Object.freeze({version:'0.5.0',build:'2026.09.02-A'});
-  const KEYS=Object.freeze({
-    attention:'dtr:attention:v1',
-    live:'dtr:pobs:live:v2',
-    previous:'dtr:pobs:previous:v2',
-    watch:'dtr:watchlist:v1',
-    recoveries:'dtr:storage-recoveries:v1'
-  });
+  const KEYS=Object.freeze({attention:'dtr:attention:v1',live:'dtr:pobs:live:v2',previous:'dtr:pobs:previous:v2',watch:'dtr:watchlist:v1',recoveries:'dtr:storage-recoveries:v1'});
   const POBS=Object.freeze([
     {view:'overview',index:'00',short:'ALL'},
     {view:'deterrence-sanctum',index:'01',short:'SANCTUM',aliases:['deterrence sanctum']},
@@ -21,6 +15,7 @@
   const runtimeEvents=[];
   const $=id=>document.getElementById(id);
   const norm=value=>String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  const setText=(node,text)=>{if(node&&node.textContent!==String(text))node.textContent=String(text);};
   let attention=false;
   let scheduled=false;
 
@@ -29,50 +24,35 @@
     try{localStorage.setItem(key,'ok');const ok=localStorage.getItem(key)==='ok';localStorage.removeItem(key);return ok;}catch{return false;}
   }
 
-  function recoveryIndex(){
-    try{const raw=JSON.parse(localStorage.getItem(KEYS.recoveries)||'[]');return Array.isArray(raw)?raw:[];}catch{return[];}
-  }
+  function recoveryIndex(){try{const raw=JSON.parse(localStorage.getItem(KEYS.recoveries)||'[]');return Array.isArray(raw)?raw:[];}catch{return[];}}
 
   function recoverJsonKey(key){
     let raw;
     try{raw=localStorage.getItem(key);}catch{return null;}
     if(raw===null)return null;
-    try{return JSON.parse(raw);}catch(error){
-      const at=Date.now();
-      const backupKey=`dtr:recovery:${at}:${key.replace(/[^a-z0-9]+/gi,'-')}`;
+    try{return JSON.parse(raw);}catch{
+      const at=Date.now(),backupKey=`dtr:recovery:${at}:${key.replace(/[^a-z0-9]+/gi,'-')}`;
       try{
         localStorage.setItem(backupKey,JSON.stringify({schemaVersion:1,originalKey:key,recoveredAt:new Date(at).toISOString(),raw}));
         localStorage.removeItem(key);
         const list=recoveryIndex();
         list.push({key,backupKey,at});
         localStorage.setItem(KEYS.recoveries,JSON.stringify(list.slice(-12)));
-        return null;
-      }catch{return null;}
+      }catch{}
+      return null;
     }
   }
 
-  function recoverKnownStorage(){
-    [KEYS.live,KEYS.previous,KEYS.watch].forEach(recoverJsonKey);
-  }
-
-  function loadAttention(){
-    try{attention=localStorage.getItem(KEYS.attention)==='true';}catch{attention=false;}
-  }
-
-  function saveAttention(){
-    try{localStorage.setItem(KEYS.attention,attention?'true':'false');}catch{}
-  }
+  function recoverKnownStorage(){[KEYS.live,KEYS.previous,KEYS.watch].forEach(recoverJsonKey);}
+  function loadAttention(){try{attention=localStorage.getItem(KEYS.attention)==='true';}catch{attention=false;}}
+  function saveAttention(){try{localStorage.setItem(KEYS.attention,attention?'true':'false');}catch{}}
 
   function mountQuickbar(){
     if($('dtrQuickbar'))return;
     const tabs=$('tabs');
     if(!tabs)return;
     tabs.insertAdjacentHTML('afterend',`<section class="dtr-quickbar" id="dtrQuickbar"><button class="dtr-attention-toggle" id="dtrAttentionToggle" type="button" aria-pressed="false"><span>ATTENTION</span><small>ONLY ISSUES</small><b id="dtrAttentionCount">0</b></button><div class="dtr-quickbar-state"><small>COMMAND FILTER</small><strong id="dtrAttentionSummary">SHOWING ALL NETWORK DATA</strong></div><span class="dtr-build-chip">v${META.version} // ${META.build}</span></section>`);
-    $('dtrAttentionToggle')?.addEventListener('click',()=>{
-      attention=!attention;
-      saveAttention();
-      applyAttention();
-    });
+    $('dtrAttentionToggle')?.addEventListener('click',()=>{attention=!attention;saveAttention();applyAttention();});
   }
 
   function mountMobileNav(){
@@ -81,8 +61,7 @@
     $('dtrMobileNav')?.addEventListener('click',event=>{
       const button=event.target.closest('[data-mobile-view]');
       if(!button)return;
-      const source=document.querySelector(`#tabs .tab[data-view="${button.dataset.mobileView}"]`);
-      source?.click();
+      document.querySelector(`#tabs .tab[data-view="${button.dataset.mobileView}"]`)?.click();
       window.scrollTo({top:0,behavior:'smooth'});
     });
     syncMobileNav();
@@ -98,56 +77,37 @@
   }
 
   function globalAlertCount(){
-    const metric=Number(String($('metricAlerts')?.textContent||'').replace(/[^0-9]/g,''));
-    if(Number.isFinite(metric))return metric;
+    const match=String($('metricAlerts')?.textContent||'').match(/\d+/);
+    if(match)return Number(match[0])||0;
     let total=0;
-    document.querySelectorAll('.base-card-footer b').forEach(node=>{const match=node.textContent.match(/(\d+)\s+ALERT/i);if(match)total+=Number(match[1])||0;});
+    document.querySelectorAll('.base-card-footer b').forEach(node=>{const m=node.textContent.match(/(\d+)\s+ALERT/i);if(m)total+=Number(m[1])||0;});
     return total;
   }
 
-  function issueTone(node){
-    const tone=node?.dataset?.tone||'';
-    return tone==='warn'||tone==='danger';
-  }
-
-  function setManagedHidden(node,hidden){
-    if(node)node.classList.toggle('dtr-attention-hidden',Boolean(hidden));
-  }
+  function issueTone(node){const tone=node?.dataset?.tone||'';return tone==='warn'||tone==='danger';}
+  function setManagedHidden(node,hidden){if(node)node.classList.toggle('dtr-attention-hidden',Boolean(hidden));}
 
   function applyAttention(){
     document.body.classList.toggle('dtr-attention-mode',attention);
     const toggle=$('dtrAttentionToggle');
     if(toggle)toggle.setAttribute('aria-pressed',attention?'true':'false');
     const count=globalAlertCount();
-    if($('dtrAttentionCount'))$('dtrAttentionCount').textContent=String(count);
-    if($('dtrAttentionSummary'))$('dtrAttentionSummary').textContent=attention?(count?`${count} ACTIVE CONDITION${count===1?'':'S'} // NORMAL DATA HIDDEN`:'ALL CLEAR // NO ACTIVE CONDITIONS'):'SHOWING ALL NETWORK DATA';
+    setText($('dtrAttentionCount'),count);
+    setText($('dtrAttentionSummary'),attention?(count?`${count} ACTIVE CONDITION${count===1?'':'S'} // NORMAL DATA HIDDEN`:'ALL CLEAR // NO ACTIVE CONDITIONS'):'SHOWING ALL NETWORK DATA');
 
     document.querySelectorAll('#overviewGrid .base-card').forEach(card=>{
       const footer=card.querySelector('.base-card-footer b')?.textContent||'';
       const hasIssue=card.dataset.state==='missing'||!/NOMINAL/i.test(footer);
       setManagedHidden(card,attention&&!hasIssue);
     });
-    document.querySelectorAll('#networkMatrix .matrix-row:not(.matrix-head)').forEach(row=>{
-      const hasIssue=[...row.querySelectorAll('button[data-tone]')].some(issueTone);
-      setManagedHidden(row,attention&&!hasIssue);
-    });
+    document.querySelectorAll('#networkMatrix .matrix-row:not(.matrix-head)').forEach(row=>setManagedHidden(row,attention&&![...row.querySelectorAll('button[data-tone]')].some(issueTone)));
     document.querySelectorAll('#maintenanceGrid .maintenance-card').forEach(card=>setManagedHidden(card,attention&&!issueTone(card)));
-    document.querySelectorAll('#watchGrid .watch-card').forEach(card=>{
-      const level=card.querySelector('.stock-level');
-      setManagedHidden(card,attention&&!issueTone(level));
-    });
-    document.querySelectorAll('#inventoryBody tr').forEach(row=>{
-      const level=row.querySelector('.stock-level');
-      setManagedHidden(row,attention&&!issueTone(level));
-    });
+    document.querySelectorAll('#watchGrid .watch-card').forEach(card=>setManagedHidden(card,attention&&!issueTone(card.querySelector('.stock-level'))));
+    document.querySelectorAll('#inventoryBody tr').forEach(row=>setManagedHidden(row,attention&&!issueTone(row.querySelector('.stock-level'))));
     syncMobileNav();
   }
 
-  function cachedSnapshot(){
-    const raw=recoverJsonKey(KEYS.live);
-    return raw&&Array.isArray(raw.data)?raw:null;
-  }
-
+  function cachedSnapshot(){const raw=recoverJsonKey(KEYS.live);return raw&&Array.isArray(raw.data)?raw:null;}
   function countPobMatches(){
     const snapshot=cachedSnapshot();
     if(!snapshot)return 0;
@@ -156,23 +116,17 @@
       return p.aliases.some(alias=>{const a=norm(alias);return hay===a||hay.includes(a);});
     })).length;
   }
-
-  function standalone(){
-    return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
-  }
-
+  function standalone(){return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;}
   function diag(key,label,tone,status,detail){return{key,label,tone,status,detail};}
 
   function collectDiagnostics(){
-    const recoveries=recoveryIndex();
-    const storageOk=storageAvailable();
+    const recoveries=recoveryIndex(),storageOk=storageAvailable();
     const runtimeOk=['tabs','overviewView','detailView','overviewGrid','networkMatrix','systemPanel'].every(id=>Boolean($(id)))&&runtimeEvents.length===0;
     const status=String($('statusText')?.textContent||'UNKNOWN').trim().toUpperCase();
     const freshness=String($('headerFreshness')?.textContent||'NO SNAPSHOT').trim();
     const matches=countPobMatches();
     const swReady=Boolean(navigator.serviceWorker?.controller||window.DTRPWAUpdates?.state?.registration);
-    const updateState=window.DTRPWAUpdates?.state;
-    const updateReady=Boolean(updateState?.pendingFingerprint&&!updateState?.applying);
+    const updateState=window.DTRPWAUpdates?.state,updateReady=Boolean(updateState?.pendingFingerprint&&!updateState?.applying);
     return[
       diag('build','APP BUILD','good',`v${META.version}`,META.build),
       diag('runtime','APP RUNTIME',runtimeOk?'good':'danger',runtimeOk?'READY':`${runtimeEvents.length||1} ISSUE${runtimeEvents.length===1?'':'S'}`,runtimeOk?'Core UI mounted without recorded runtime errors.':'A runtime or required-shell failure was detected this session.'),
@@ -190,36 +144,21 @@
     if(!grid||!overall)return;
     const checks=collectDiagnostics();
     grid.innerHTML=checks.map(check=>`<article class="dtr-diagnostic-card" data-tone="${check.tone}" data-check="${check.key}"><small>${check.label}</small><strong>${check.status}</strong><span>${check.detail}</span></article>`).join('');
-    const danger=checks.filter(x=>x.tone==='danger').length;
-    const warn=checks.filter(x=>x.tone==='warn').length;
+    const danger=checks.filter(x=>x.tone==='danger').length,warn=checks.filter(x=>x.tone==='warn').length;
     overall.dataset.tone=danger?'danger':warn?'warn':'good';
-    overall.querySelector('strong').textContent=danger?'ATTENTION REQUIRED':warn?'CORE SYSTEMS NOMINAL':'ALL SYSTEMS NOMINAL';
-    overall.querySelector('span').textContent=danger?`${danger} blocking check${danger===1?'':'s'} detected.`:warn?`${warn} status notice${warn===1?'':'s'}; no blocking app failure detected.`:'Runtime, storage, telemetry and app shell report ready.';
+    setText(overall.querySelector('strong'),danger?'ATTENTION REQUIRED':warn?'CORE SYSTEMS NOMINAL':'ALL SYSTEMS NOMINAL');
+    setText(overall.querySelector('span'),danger?`${danger} blocking check${danger===1?'':'s'} detected.`:warn?`${warn} status notice${warn===1?'':'s'}; no blocking app failure detected.`:'Runtime, storage, telemetry and app shell report ready.');
     mountCopyDiagnostics();
   }
 
   function diagnosticsReport(){
     const checks=collectDiagnostics();
-    return[
-      'DTR SYSTEM CHECK',
-      `GENERATED: ${new Date().toISOString()}`,
-      `APP: v${META.version} // BUILD ${META.build}`,
-      `WINDOW: ${standalone()?'STANDALONE APP':'BROWSER'}`,
-      '',
-      ...checks.map(check=>`${check.label}: ${check.status} // ${check.detail}`),
-      '',
-      `SESSION RUNTIME EVENTS: ${runtimeEvents.length}`,
-      `STORAGE RECOVERIES: ${recoveryIndex().length}`,
-      'PRIVACY: No commodity quantities, prices or POB credit balances are included.'
-    ].join('\n');
+    return['DTR SYSTEM CHECK',`GENERATED: ${new Date().toISOString()}`,`APP: v${META.version} // BUILD ${META.build}`,`WINDOW: ${standalone()?'STANDALONE APP':'BROWSER'}`,'',...checks.map(check=>`${check.label}: ${check.status} // ${check.detail}`),'',`SESSION RUNTIME EVENTS: ${runtimeEvents.length}`,`STORAGE RECOVERIES: ${recoveryIndex().length}`,'PRIVACY: No commodity quantities, prices or POB credit balances are included.'].join('\n');
   }
 
   async function copyDiagnostics(){
-    const text=diagnosticsReport();
-    let copied=false;
-    try{await navigator.clipboard.writeText(text);copied=true;}catch{
-      try{const area=document.createElement('textarea');area.value=text;area.style.position='fixed';area.style.opacity='0';document.body.appendChild(area);area.select();copied=document.execCommand('copy');area.remove();}catch{}
-    }
+    const text=diagnosticsReport();let copied=false;
+    try{await navigator.clipboard.writeText(text);copied=true;}catch{try{const area=document.createElement('textarea');area.value=text;area.style.position='fixed';area.style.opacity='0';document.body.appendChild(area);area.select();copied=document.execCommand('copy');area.remove();}catch{}}
     const button=$('dtrDiagnosticsCopy');
     if(button){const old=button.textContent;button.textContent=copied?'COPIED':'COPY FAILED';window.setTimeout(()=>button.textContent=old,1400);}
   }
@@ -227,53 +166,27 @@
   function mountCopyDiagnostics(){
     const actions=document.querySelector('#systemPanel .system-actions');
     if(!actions||$('dtrDiagnosticsCopy'))return;
-    const button=document.createElement('button');
-    button.id='dtrDiagnosticsCopy';
-    button.type='button';
-    button.textContent='COPY DIAGNOSTICS';
-    button.addEventListener('click',copyDiagnostics);
-    actions.appendChild(button);
+    const button=document.createElement('button');button.id='dtrDiagnosticsCopy';button.type='button';button.textContent='COPY DIAGNOSTICS';button.addEventListener('click',copyDiagnostics);actions.appendChild(button);
   }
 
   function mountBuildBadge(){
     const footer=document.querySelector('body>footer');
     if(!footer||$('dtrBuildBadge'))return;
-    const badge=document.createElement('span');
-    badge.id='dtrBuildBadge';
-    badge.className='dtr-footer-build';
-    badge.textContent=`DTR v${META.version} // ${META.build}`;
-    footer.appendChild(badge);
+    const badge=document.createElement('span');badge.id='dtrBuildBadge';badge.className='dtr-footer-build';badge.textContent=`DTR v${META.version} // ${META.build}`;footer.appendChild(badge);
   }
 
-  function schedule(){
-    if(scheduled)return;
-    scheduled=true;
-    requestAnimationFrame(()=>{scheduled=false;applyAttention();});
-  }
-
-  function bindDiagnostics(){
-    $('systemButton')?.addEventListener('click',()=>setTimeout(renderDiagnostics,0));
-    $('systemRefresh')?.addEventListener('click',()=>setTimeout(renderDiagnostics,0));
-  }
+  function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;applyAttention();});}
+  function bindDiagnostics(){$('systemButton')?.addEventListener('click',()=>setTimeout(renderDiagnostics,0));$('systemRefresh')?.addEventListener('click',()=>setTimeout(renderDiagnostics,0));}
+  function observeDynamic(){['overviewGrid','networkMatrix','maintenanceGrid','watchGrid','inventoryBody'].forEach(id=>{const node=$(id);if(node)new MutationObserver(schedule).observe(node,{childList:true,subtree:true});});}
 
   function init(){
-    recoverKnownStorage();
-    loadAttention();
-    mountQuickbar();
-    mountMobileNav();
-    mountBuildBadge();
-    bindDiagnostics();
-    renderDiagnostics();
-    applyAttention();
-    const tabs=$('tabs');
-    if(tabs)new MutationObserver(()=>{syncMobileNav();schedule();}).observe(tabs,{subtree:true,attributes:true,attributeFilter:['class']});
-    new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});
+    recoverKnownStorage();loadAttention();mountQuickbar();mountMobileNav();mountBuildBadge();bindDiagnostics();renderDiagnostics();applyAttention();observeDynamic();
+    const tabs=$('tabs');if(tabs)new MutationObserver(()=>{syncMobileNav();schedule();}).observe(tabs,{subtree:true,attributes:true,attributeFilter:['class']});
   }
 
   window.addEventListener('error',event=>{runtimeEvents.push({type:'error',at:Date.now(),message:String(event.message||'runtime error')});if(runtimeEvents.length>20)runtimeEvents.shift();});
   window.addEventListener('unhandledrejection',event=>{runtimeEvents.push({type:'promise',at:Date.now(),message:String(event.reason?.message||event.reason||'promise rejection')});if(runtimeEvents.length>20)runtimeEvents.shift();});
-  window.addEventListener('online',()=>{schedule();renderDiagnostics();});
-  window.addEventListener('offline',renderDiagnostics);
+  window.addEventListener('online',()=>{schedule();renderDiagnostics();});window.addEventListener('offline',renderDiagnostics);
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){schedule();renderDiagnostics();}});
 
   window.DTRQuality={META,get attention(){return attention;},setAttention(value){attention=Boolean(value);saveAttention();applyAttention();},renderDiagnostics,diagnosticsReport,recoverKnownStorage};
