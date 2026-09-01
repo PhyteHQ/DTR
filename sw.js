@@ -1,9 +1,9 @@
 /* DTR POB Network · offline shell + visible UPDATE NOW flow.
    App assets are available offline. Darkstat telemetry remains network-only. */
 const CACHE_PREFIX='dtr-pob-network-pwa-';
-const CACHE_NAME=`${CACHE_PREFIX}2026-09-01-pwa-4`;
+const CACHE_NAME=`${CACHE_PREFIX}2026-09-02-pwa-5`;
 const APP_SHELL=[
-  './','./index.html','./styles.css','./enhancements.css','./app.js','./enhancements.js','./dtr-pwa-updates.js','./manifest.webmanifest',
+  './','./index.html','./styles.css','./enhancements.css','./dtr-quality.css','./app.js','./enhancements.js','./dtr-quality.js','./dtr-pwa-updates.js','./manifest.webmanifest',
   './assets/favicon-64.png','./assets/apple-touch-icon.png','./assets/icon-192.png','./assets/icon-512.png','./assets/icon-maskable-512.png'
 ];
 
@@ -11,8 +11,6 @@ self.addEventListener('install',event=>{
   event.waitUntil((async()=>{
     const cache=await caches.open(CACHE_NAME);
     await cache.addAll(APP_SHELL);
-    /* Bootstrap the update-aware shell immediately. Future app changes are
-       surfaced to the user by the DTR UPDATE NOW controller. */
     await self.skipWaiting();
   })());
 });
@@ -25,9 +23,7 @@ self.addEventListener('activate',event=>{
   })());
 });
 
-self.addEventListener('message',event=>{
-  if(event.data?.type==='SKIP_WAITING')self.skipWaiting();
-});
+self.addEventListener('message',event=>{if(event.data?.type==='SKIP_WAITING')self.skipWaiting();});
 
 async function networkFirst(request,fallback){
   const cache=await caches.open(CACHE_NAME);
@@ -57,8 +53,6 @@ self.addEventListener('fetch',event=>{
   if(request.method!=='GET')return;
   const url=new URL(request.url);
 
-  /* Update probes must bypass the app cache so DTR can compare the running
-     shell with the newest GitHub Pages deployment. */
   if(url.origin===self.location.origin&&url.searchParams.has('dtr_update_probe')){
     event.respondWith(fetch(request,{cache:'no-store'}));
     return;
@@ -74,7 +68,5 @@ self.addEventListener('fetch',event=>{
     return;
   }
 
-  if(url.hostname==='fonts.googleapis.com'||url.hostname==='fonts.gstatic.com'){
-    event.respondWith(cacheFirst(request));
-  }
+  if(url.hostname==='fonts.googleapis.com'||url.hostname==='fonts.gstatic.com')event.respondWith(cacheFirst(request));
 });
