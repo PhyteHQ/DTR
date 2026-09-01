@@ -5,7 +5,7 @@
 
   const FINGERPRINT_KEY='dtr:pwa:shell-fingerprint:v1';
   const CACHE_PREFIX='dtr-pob-network-pwa-';
-  const PROBE_ASSETS=['./index.html','./styles.css','./enhancements.css','./dtr-quality.css','./dtr-uplink.css','./app.js','./enhancements.js','./dtr-pwa-install.js','./dtr-quality.js','./dtr-uplink.js','./dtr-pwa-updates.js','./manifest.webmanifest','./sw.js'];
+  const PROBE_ASSETS=['./index.html','./styles.css','./enhancements.css','./dtr-quality.css','./dtr-uplink.css','./app.js','./enhancements.js','./dtr-quality.js','./dtr-uplink.js','./dtr-pwa-updates.js','./manifest.webmanifest','./sw.js'];
   const state={registration:null,pendingFingerprint:'',checking:false,dismissed:false,applying:false};
   const $=id=>document.getElementById(id);
 
@@ -95,13 +95,12 @@
     }
   }
 
-  async function register(){
+  async function attachRegistration(){
     mount();
     if('serviceWorker'in navigator){
       try{
-        state.registration=await navigator.serviceWorker.getRegistration('./');
-        if(!state.registration)state.registration=await navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'});
-      }catch(error){console.warn('DTR PWA REGISTRATION UNAVAILABLE:',String(error?.message||error));}
+        state.registration=await navigator.serviceWorker.getRegistration('./')||await navigator.serviceWorker.ready.catch(()=>null);
+      }catch(error){console.warn('DTR PWA REGISTRATION LOOKUP UNAVAILABLE:',String(error?.message||error));}
     }
     window.setTimeout(checkForUpdate,2500);
     window.setInterval(checkForUpdate,60*60*1000);
@@ -111,5 +110,5 @@
   window.addEventListener('online',()=>{state.dismissed=false;checkForUpdate();});
 
   window.DTRPWAUpdates={state,checkForUpdate,applyUpdate};
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',register,{once:true});else register();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',attachRegistration,{once:true});else attachRegistration();
 })();
