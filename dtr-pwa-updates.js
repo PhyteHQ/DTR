@@ -5,7 +5,7 @@
 
   const FINGERPRINT_KEY='dtr:pwa:shell-fingerprint:v1';
   const CACHE_PREFIX='dtr-pob-network-pwa-';
-  const PROBE_ASSETS=['./index.html','./styles.css','./enhancements.css','./app.js','./enhancements.js','./manifest.webmanifest','./sw.js'];
+  const PROBE_ASSETS=['./index.html','./styles.css','./enhancements.css','./dtr-quality.css','./app.js','./enhancements.js','./dtr-quality.js','./dtr-pwa-updates.js','./manifest.webmanifest','./sw.js'];
   const state={registration:null,pendingFingerprint:'',checking:false,dismissed:false,applying:false};
   const $=id=>document.getElementById(id);
 
@@ -39,7 +39,7 @@
     }
     let hash=2166136261;
     for(let i=0;i<text.length;i++){hash^=text.charCodeAt(i);hash=Math.imul(hash,16777619);}
-    return (hash>>>0).toString(16);
+    return(hash>>>0).toString(16);
   }
 
   async function probeAsset(path,stamp){
@@ -47,9 +47,7 @@
     url.searchParams.set('dtr_update_probe',stamp);
     const response=await fetch(url,{cache:'no-store',headers:{'Cache-Control':'no-cache'}});
     if(!response.ok)throw new Error(`${path} HTTP ${response.status}`);
-    const etag=response.headers.get('etag');
-    const modified=response.headers.get('last-modified');
-    const length=response.headers.get('content-length');
+    const etag=response.headers.get('etag'),modified=response.headers.get('last-modified'),length=response.headers.get('content-length');
     if(etag||modified)return`${path}|${etag||''}|${modified||''}|${length||''}`;
     return`${path}|${await digestText(await response.text())}`;
   }
@@ -69,9 +67,8 @@
       const applied=localStorage.getItem(FINGERPRINT_KEY);
       if(!applied){localStorage.setItem(FINGERPRINT_KEY,latest);return;}
       if(latest!==applied)showUpdate(latest);
-    }catch(error){
-      console.warn('DTR UPDATE PROBE FAILED:',String(error?.message||error));
-    }finally{state.checking=false;}
+    }catch(error){console.warn('DTR UPDATE PROBE FAILED:',String(error?.message||error));}
+    finally{state.checking=false;}
   }
 
   async function clearAppCaches(){
@@ -82,11 +79,7 @@
 
   async function applyUpdate(){
     if(state.applying||!state.pendingFingerprint)return;
-    if(!navigator.onLine){
-      const message=$('dtrUpdateMessage');
-      if(message)message.textContent='CONNECT TO THE NETWORK BEFORE APPLYING THIS UPDATE.';
-      return;
-    }
+    if(!navigator.onLine){const message=$('dtrUpdateMessage');if(message)message.textContent='CONNECT TO THE NETWORK BEFORE APPLYING THIS UPDATE.';return;}
     state.applying=true;
     const button=$('dtrUpdatePrimary');
     if(button){button.disabled=true;button.textContent='UPDATING…';}
@@ -95,11 +88,10 @@
       localStorage.setItem(FINGERPRINT_KEY,state.pendingFingerprint);
       try{await state.registration?.update();}catch{}
       window.location.reload();
-    }catch(error){
+    }catch{
       state.applying=false;
       if(button){button.disabled=false;button.textContent='UPDATE NOW';}
-      const message=$('dtrUpdateMessage');
-      if(message)message.textContent='UPDATE FAILED. CHECK THE CONNECTION AND TRY AGAIN.';
+      const message=$('dtrUpdateMessage');if(message)message.textContent='UPDATE FAILED. CHECK THE CONNECTION AND TRY AGAIN.';
     }
   }
 
@@ -116,6 +108,5 @@
   window.addEventListener('online',()=>{state.dismissed=false;checkForUpdate();});
 
   window.DTRPWAUpdates={state,checkForUpdate,applyUpdate};
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',register,{once:true});
-  else register();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',register,{once:true});else register();
 })();
