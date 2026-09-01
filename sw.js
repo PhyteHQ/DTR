@@ -1,17 +1,72 @@
-const CACHE='dtr-command-shell-v3';
-const SHELL=[
-  './',
-  './index.html',
-  './styles.css',
-  './app.js',
-  './manifest.webmanifest',
-  './assets/icon-192.png',
-  './assets/icon-512.png',
-  './assets/icon-maskable-512.png',
-  './assets/apple-touch-icon.png',
-  './assets/favicon-64.png',
-  './assets/dtr-sigil-256.b64'
+/* DTR POB Network · RHW-style install/offline shell.
+   App assets are available offline. Darkstat telemetry remains network-only. */
+const CACHE_PREFIX='dtr-pob-network-pwa-';
+const CACHE_NAME=`${CACHE_PREFIX}2026-09-01-pwa-2`;
+const APP_SHELL=[
+  './','./index.html','./styles.css','./enhancements.css','./app.js','./enhancements.js','./manifest.webmanifest',
+  './assets/dtr-sigil.jpg','./assets/favicon-64.png','./assets/apple-touch-icon.png',
+  './assets/icon-192.png','./assets/icon-512.png','./assets/icon-maskable-512.png'
 ];
-self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()))});
-self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()))});
-self.addEventListener('fetch',event=>{const req=event.request;if(req.method!=='GET')return;const url=new URL(req.url);if(url.origin!==location.origin)return;event.respondWith(fetch(req).then(response=>{const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(req,copy));return response}).catch(()=>caches.match(req).then(hit=>hit||caches.match('./index.html'))))});
+
+self.addEventListener('install',event=>{
+  event.waitUntil((async()=>{
+    const cache=await caches.open(CACHE_NAME);
+    await cache.addAll(APP_SHELL);
+    await self.skipWaiting();
+  })());
+});
+
+self.addEventListener('activate',event=>{
+  event.waitUntil((async()=>{
+    const keys=await caches.keys();
+    await Promise.all(keys.filter(key=>key.startsWith(CACHE_PREFIX)&&key!==CACHE_NAME).map(key=>caches.delete(key)));
+    await self.clients.claim();
+  })());
+});
+
+self.addEventListener('message',event=>{
+  if(event.data?.type==='SKIP_WAITING')self.skipWaiting();
+});
+
+async function networkFirst(request,fallback){
+  const cache=await caches.open(CACHE_NAME);
+  try{
+    const response=await fetch(request);
+    if(!response.ok)throw new Error(`NETWORK RESPONSE ${response.status}`);
+    await cache.put(request,response.clone());
+    return response;
+  }catch(error){
+    const cached=await cache.match(request,{ignoreSearch:true})||await cache.match(fallback);
+    if(cached)return cached;
+    throw error;
+  }
+}
+
+async function cacheFirst(request){
+  const cache=await caches.open(CACHE_NAME);
+  const cached=await cache.match(request,{ignoreSearch:true});
+  if(cached)return cached;
+  const response=await fetch(request);
+  if(response.ok)await cache.put(request,response.clone());
+  return response;
+}
+
+self.addEventListener('fetch',event=>{
+  const request=event.request;
+  if(request.method!=='GET')return;
+  const url=new URL(request.url);
+
+  if(request.mode==='navigate'){
+    event.respondWith(networkFirst(request,'./index.html'));
+    return;
+  }
+
+  if(url.origin===self.location.origin){
+    event.respondWith(cacheFirst(request));
+    return;
+  }
+
+  if(url.hostname==='fonts.googleapis.com'||url.hostname==='fonts.gstatic.com'){
+    event.respondWith(cacheFirst(request));
+  }
+});
