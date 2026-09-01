@@ -1,9 +1,10 @@
-/* DTR POB Network · offline shell + visible UPDATE NOW flow.
+/* DTR POB Network · RHW-style offline app shell.
    App assets are available offline. Darkstat telemetry remains network-only. */
 const CACHE_PREFIX='dtr-pob-network-pwa-';
-const CACHE_NAME=`${CACHE_PREFIX}2026-09-02-pwa-8`;
+const CACHE_NAME=`${CACHE_PREFIX}2026-09-02-pwa-9`;
 const APP_SHELL=[
-  './','./index.html','./styles.css','./enhancements.css','./dtr-quality.css','./dtr-uplink.css','./app.js','./enhancements.js','./dtr-quality.js','./dtr-uplink.js','./dtr-pwa-updates.js','./manifest.webmanifest',
+  './','./index.html','./manifest.webmanifest','./styles.css','./enhancements.css','./dtr-quality.css','./dtr-uplink.css',
+  './dtr-pwa.js','./app.js','./enhancements.js','./dtr-quality.js','./dtr-uplink.js',
   './assets/favicon-64.png','./assets/apple-touch-icon.png','./assets/icon-192.png','./assets/icon-512.png','./assets/icon-maskable-512.png'
 ];
 
@@ -28,12 +29,12 @@ self.addEventListener('message',event=>{if(event.data?.type==='SKIP_WAITING')sel
 async function networkFirst(request,fallback){
   const cache=await caches.open(CACHE_NAME);
   try{
-    const response=await fetch(request,{cache:'no-store'});
+    const response=await fetch(request);
     if(!response.ok)throw new Error(`NETWORK RESPONSE ${response.status}`);
     await cache.put(request,response.clone());
     return response;
   }catch(error){
-    const cached=await cache.match(request,{ignoreSearch:true})||await cache.match(fallback);
+    const cached=await cache.match(request)||await cache.match(fallback);
     if(cached)return cached;
     throw error;
   }
@@ -52,11 +53,6 @@ self.addEventListener('fetch',event=>{
   const request=event.request;
   if(request.method!=='GET')return;
   const url=new URL(request.url);
-
-  if(url.origin===self.location.origin&&url.searchParams.has('dtr_update_probe')){
-    event.respondWith(fetch(request,{cache:'no-store'}));
-    return;
-  }
 
   if(request.mode==='navigate'){
     event.respondWith(networkFirst(request,'./index.html'));
