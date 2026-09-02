@@ -148,7 +148,8 @@ function normalizeRecipe(raw, names) {
   for (const entry of raw.produced_item || []) {
     const parts = tokens(entry.value);
     if (!parts.length) continue;
-    producedOutputs.push(makeItem(parts[0], parts[1] ?? 1, entry.comment, names));
+    const productName = cleanName(entry.comment) || names.get(parts[0]) || infoName;
+    producedOutputs.push(makeItem(parts[0], parts[1] ?? 1, productName, names));
   }
 
   const affiliationOutputs = [];
@@ -169,7 +170,6 @@ function normalizeRecipe(raw, names) {
     outputs.push(makeItem(raw.nickname, 1, infoName, names));
   }
   if (!outputs.length) return null;
-  if (infoName) outputs[0].name = infoName;
 
   const inputs = [];
   for (const entry of raw.consumed || []) {
@@ -250,7 +250,7 @@ const recipes = rawRecipes.map(recipe => normalizeRecipe(recipe, names)).filter(
 
 const catalog = {
   meta: {
-    schemaVersion: 1,
+    schemaVersion: 2,
     sourceUrl: 'https://discoverygc.com/gameconfigpublic/',
     sourceFiles: [canonicalSourceName(itemsPath), canonicalSourceName(modulesPath)],
     sourceSha256: {
@@ -259,7 +259,7 @@ const catalog = {
     },
     recipeCount: recipes.length,
     productCount: new Set(recipes.flatMap(recipe => recipe.outputs.map(output => output.id))).size,
-    generatedFor: 'DTR v0.7.0'
+    generatedFor: 'DTR v0.7.1'
   },
   recipes
 };
