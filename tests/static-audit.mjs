@@ -75,12 +75,15 @@ for (const pattern of nonEnglishUi) {
 
 assert.match(qualityCss, /min-height:\s*64px/, 'mobile navigation needs large touch targets');
 assert(!/font-size:\s*6\.3px/.test(qualityCss), 'mobile navigation text must not use the legacy 6.3px size');
+assert.match(quality, /class="dtr-quickbar-inner"/, 'desktop quickbar content must use a centred inner rail');
+assert.match(qualityCss, /\.dtr-quickbar-inner\s*{[\s\S]*?width:\s*min\(1180px, calc\(100% - 32px\)\)/, 'desktop quickbar content must align with the dashboard shell');
 assert.match(qualityCss, /@media \(max-width: 760px\)[\s\S]*?\.dtr-quickbar\s*{[\s\S]*?position:\s*relative/, 'mobile command filter must scroll away with the header');
 assert.match(responsiveCss, /@media \(max-width: 680px\)[\s\S]*?\.transmission-rail\s*{[\s\S]*?display:\s*none/, 'decorative transmission rail must collapse on phones');
 assert.match(responsiveCss, /\.topbar\s*{[\s\S]*?padding:\s*12px 6px 8px/, 'phone header must use compact spacing');
 assert.match(responsiveCss, /orientation:\s*landscape/, 'compact landscape header rules must exist');
-assert.match(quality, /version:\s*'0\.6\.2'/, 'visible build version must match v0.6.2');
-assert.match(sw, /v0\.6\.2/, 'service-worker cache must match v0.6.2');
+assert.match(responsiveCss, /@media \(min-width: 981px\)[\s\S]*?\.base-card-stats strong\s*{[\s\S]*?font-size:\s*1rem/, 'desktop POB values must remain readable');
+assert.match(quality, /version:\s*'0\.6\.3'/, 'visible build version must match v0.6.3');
+assert.match(sw, /v0\.6\.3/, 'service-worker cache must match v0.6.3');
 
 for (const cssPath of localRuntimeRefs.filter(path => path.endsWith('.css'))) {
   const css = await read(cssPath);

@@ -1,4 +1,4 @@
-/* DTR v0.6.2 responsive and accessibility layer */
+/* DTR v0.6.3 responsive and accessibility layer */
 :root {
   --muted: #958a91;
 }
@@ -159,6 +159,77 @@ input:focus-visible,
 .stock-range.is-fixed {
   justify-content: flex-start;
   color: var(--gold-soft);
+}
+
+@media (min-width: 981px) {
+  .network-metrics article {
+    min-height: 128px;
+    padding: 18px;
+  }
+
+  .network-metrics small {
+    font-size: 0.75rem;
+  }
+
+  .network-metrics strong {
+    margin-top: 12px;
+    font-size: clamp(1.8rem, 1.5vw, 2.25rem);
+  }
+
+  .network-metrics span {
+    margin-top: 9px;
+    font-size: 0.75rem;
+  }
+
+  .base-card {
+    padding: 19px 17px 15px;
+  }
+
+  .node-id {
+    font-size: 0.7rem;
+  }
+
+  .base-card h3 {
+    font-size: 1.1rem;
+  }
+
+  .where {
+    min-height: 38px;
+    font-size: 0.75rem;
+  }
+
+  .health-pill {
+    padding: 6px 8px;
+    font-size: 0.75rem;
+  }
+
+  .base-card-stats > div:last-child {
+    grid-column: auto;
+  }
+
+  .base-card-stats small {
+    font-size: 0.68rem;
+  }
+
+  .base-card-stats strong {
+    margin-top: 5px;
+    font-size: 1rem;
+  }
+
+  .maintenance-mini > span {
+    padding: 8px 5px;
+    font-size: 0.65rem;
+  }
+
+  .maintenance-mini b {
+    margin-top: 4px;
+    font-size: 0.82rem;
+  }
+
+  .base-card-footer,
+  .base-card-footer b {
+    font-size: 0.68rem;
+  }
 }
 
 .dtr-uplink-head > span,
@@ -488,7 +559,7 @@ input:focus-visible,
     display: none;
   }
 
-  .dtr-quickbar {
+  .dtr-quickbar-inner {
     min-height: 46px;
     padding-block: 3px;
   }

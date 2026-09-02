@@ -20,6 +20,7 @@ Mobile-first operational dashboard for the DTR faction's four player-owned bases
 - On phones, decorative header layers collapse so live POB content begins substantially higher on the first screen.
 - POB health and last-sync telemetry live in the detail header, leaving only credits and storage as compact summary cards.
 - Equal API minimum and maximum stock limits are shown once as a required stock value.
+- On wide desktop screens, the command filter aligns with the dashboard shell and overview figures use larger display type.
 
 ## Quality checks
 
