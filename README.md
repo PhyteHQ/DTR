@@ -17,6 +17,7 @@ Mobile-first operational dashboard for the DTR faction's four player-owned bases
 - Facility supplies fall back to DTR maintenance thresholds only when the API provides no valid limits.
 - App updates wait for explicit approval through **UPDATE NOW** before reloading.
 - The desktop tab strip and the larger fixed mobile navigation operate on the same view state.
+- On phones, decorative header layers collapse so live POB content begins substantially higher on the first screen.
 
 ## Quality checks
 
