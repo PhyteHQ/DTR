@@ -3,7 +3,7 @@
   'use strict';
   if (window.DTRQuality) return;
 
-  const META = Object.freeze({ version: '0.6.2', build: '2026.09.02-D' });
+  const META = Object.freeze({ version: '0.6.3', build: '2026.09.02-E' });
   const ATTENTION_KEY = 'dtr:attention:v1';
   const runtimeEvents = [];
   const $ = id => document.getElementById(id);
@@ -44,11 +44,13 @@
     const tabs = $('tabs');
     if (!tabs) return;
     tabs.insertAdjacentHTML('afterend', `<section class="dtr-quickbar" id="dtrQuickbar" aria-label="Command filter">
-      <button class="dtr-attention-toggle" id="dtrAttentionToggle" type="button" aria-pressed="false" aria-label="Show only issues">
-        <span>ATTENTION</span><small>ONLY ISSUES</small><b id="dtrAttentionCount">0</b>
-      </button>
-      <div class="dtr-quickbar-state"><small>COMMAND FILTER</small><strong id="dtrAttentionSummary">ALL NETWORK DATA</strong></div>
-      <span class="dtr-build-chip">v${META.version} // ${META.build}</span>
+      <div class="dtr-quickbar-inner">
+        <button class="dtr-attention-toggle" id="dtrAttentionToggle" type="button" aria-pressed="false" aria-label="Show only issues">
+          <span>ATTENTION</span><small>ONLY ISSUES</small><b id="dtrAttentionCount">0</b>
+        </button>
+        <div class="dtr-quickbar-state"><small>COMMAND FILTER</small><strong id="dtrAttentionSummary">ALL NETWORK DATA</strong></div>
+        <span class="dtr-build-chip">v${META.version} // ${META.build}</span>
+      </div>
     </section>`);
     $('dtrAttentionToggle')?.addEventListener('click', () => {
       attention = !attention;
