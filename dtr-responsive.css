@@ -1,0 +1,205 @@
+/* DTR v0.6 responsive and accessibility layer */
+:root {
+  --muted: #958a91;
+}
+
+.tabs {
+  top: var(--sticky-offset, 0px);
+}
+
+button:focus-visible,
+input:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+
+.tab,
+.base-card,
+.matrix-row > button,
+.filter-segments button,
+.watch-toggle,
+.system-sheet button,
+.install-actions button {
+  touch-action: manipulation;
+}
+
+.section-subline,
+.location-line,
+.where {
+  color: #9a8e95;
+}
+
+.filter-segments button,
+.watch-toggle,
+.system-sheet header button,
+.system-actions button,
+.install-actions button {
+  min-height: 44px;
+}
+
+.watch-toggle {
+  width: 44px;
+  height: 44px;
+  font-size: 18px;
+}
+
+.install-sheet small,
+.system-sheet header small {
+  font-size: 0.75rem;
+}
+
+.install-sheet strong {
+  font-size: 0.9rem;
+}
+
+.install-sheet span,
+.system-overall span,
+.system-grid span {
+  font-size: 0.8rem;
+}
+
+.install-actions button,
+.system-sheet header button,
+.system-actions button {
+  font-size: 0.75rem;
+}
+
+.matrix-wrap {
+  scrollbar-color: var(--red) #120d0f;
+  overscroll-behavior-inline: contain;
+}
+
+.matrix-hint {
+  white-space: normal;
+  text-align: right;
+  line-height: 1.4;
+}
+
+.dtr-uplink-head > span,
+.dtr-uplink-actions > span,
+.dtr-uplink-state small,
+.dtr-uplink-grid small {
+  font-size: 0.7rem;
+}
+
+@media (max-width: 680px) {
+  .header-actions {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .uplink {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  .uplink button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 56px;
+    min-height: 44px;
+    padding: 0 9px;
+  }
+
+  .network-metrics,
+  .overview-grid,
+  .maintenance-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stat-grid .stat-card:first-child,
+  .stat-grid .stat-card:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .matrix-hint {
+    display: inline-flex;
+    max-width: 145px;
+    font-size: 0.7rem;
+  }
+
+  .matrix-table {
+    min-width: 620px;
+  }
+
+  .matrix-row {
+    grid-template-columns: 150px repeat(4, minmax(112px, 1fr));
+  }
+
+  .matrix-row > strong,
+  .matrix-head > span:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    background: #090708;
+    box-shadow: 8px 0 14px rgba(0, 0, 0, 0.38);
+  }
+
+  .matrix-head > span:first-child {
+    z-index: 4;
+  }
+
+  .filter-segments button {
+    padding-inline: 13px;
+    font-size: 0.72rem;
+  }
+
+  td {
+    font-size: 0.82rem;
+  }
+
+  td::before {
+    font-size: 0.7rem;
+  }
+
+  .item-name {
+    font-size: 0.95rem;
+  }
+
+  .install-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .install-actions button {
+    min-height: 48px;
+  }
+
+  .dtr-uplink-grid > div:last-child {
+    grid-column: 1 / -1;
+    padding: 0 0 10px;
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 390px) {
+  .brand-sigil {
+    width: 56px;
+    height: 56px;
+  }
+
+  .brand-main {
+    font-size: 31px;
+  }
+
+  .brand-sub {
+    font-size: 15px;
+  }
+
+  .system-button,
+  .install-button {
+    min-width: 62px;
+  }
+
+  .uplink button {
+    min-width: 52px;
+    padding-inline: 7px;
+    font-size: 0.7rem;
+  }
+}

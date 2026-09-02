@@ -1,61 +1,1120 @@
-(()=>{'use strict';
-const API='https://darkstat.dd84ai.com/api/pobs';
-const HEALTH_MAX=24000000,REFRESH_MS=300000,TIMEOUT_MS=18000;
-const KEYS={live:'dtr:pobs:live:v2',previous:'dtr:pobs:previous:v2',watch:'dtr:watchlist:v1',view:'dtr:view:v1'};
-const POBS=[
-{key:'deterrence-sanctum',short:'SANCTUM',label:'Deterrence Sanctum',aliases:['deterrence sanctum']},
-{key:'ravenna-invicta',short:'INVICTA',label:'Ravenna Invicta',aliases:['ravenna invicta','invicta']},
-{key:'forja-del-vacio',short:'FORJA',label:'Forja del Vacio',aliases:['forja del vacio','forja del vacío']},
-{key:'fort-torrelavega',short:'TORRELAVEGA',label:'Fort Torrelavega',aliases:['fort torrelavega','torrelavega']}
-];
-const MAINT=[
-{key:'basic alloy',label:'Basic Alloy',code:'ALLOY',critical:2500,warn:15000},
-{key:'food rations',label:'Food Rations',code:'FOOD',critical:2500,warn:15000},
-{key:'consumer goods',label:'Consumer Goods',code:'GOODS',critical:2500,warn:15000}
-];
-const $=id=>document.getElementById(id),E={uplink:$('uplink'),status:$('statusText'),refresh:$('refreshButton'),tabs:$('tabs'),overview:$('overviewView'),detail:$('detailView'),grid:$('overviewGrid'),overviewSync:$('overviewSync'),networkState:$('networkState'),metricNodes:$('metricNodes'),metricNodesSub:$('metricNodesSub'),metricCredits:$('metricCredits'),metricCreditsDelta:$('metricCreditsDelta'),metricStorage:$('metricStorage'),metricStorageDelta:$('metricStorageDelta'),metricAlerts:$('metricAlerts'),metricAlertsSub:$('metricAlertsSub'),matrix:$('networkMatrix'),kicker:$('detailKicker'),name:$('detailName'),location:$('detailLocation'),badge:$('detailHealthBadge'),detailDelta:$('detailDelta'),health:$('healthValue'),meter:$('healthMeter'),healthDelta:$('healthDelta'),credits:$('creditsValue'),creditsDelta:$('creditsDelta'),storage:$('storageValue'),storageDelta:$('storageDelta'),sync:$('syncValue'),syncMode:$('syncMode'),maintenance:$('maintenanceGrid'),facilityState:$('facilityState'),priority:$('priorityList'),priorityCount:$('priorityCount'),watchGrid:$('watchGrid'),watchCount:$('watchCount'),search:$('inventorySearch'),filters:$('inventoryFilters'),body:$('inventoryBody'),empty:$('inventoryEmpty'),error:$('errorView'),errorText:$('errorText'),footer:$('footerState'),freshness:$('headerFreshness'),clock:$('headerClock'),offline:$('offlineBanner'),systemButton:$('systemButton'),systemPanel:$('systemPanel'),systemClose:$('systemClose'),systemGrid:$('systemGrid'),systemOverall:$('systemOverall'),systemRefresh:$('systemRefresh'),systemInstall:$('systemInstall'),installButton:$('installButton'),installSheet:$('installSheet'),installTitle:$('installTitle'),installMessage:$('installMessage'),installPrimary:$('installPrimary'),installClose:$('installClose')};
-let data=[],previousData=[],bases=new Map(),previousBases=new Map(),view=localStorage.getItem(KEYS.view)||'overview',last=null,mode='none',timer=null,inventoryFilter='all',installPrompt=null,registration=null;
-const num=new Intl.NumberFormat('de-DE'),fmt=n=>Number.isFinite(n)?num.format(Math.round(n)):'—',cash=n=>Number.isFinite(n)?`${num.format(Math.round(n))} cr`:'—';
-const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(),finite=v=>{const x=Number(v);return Number.isFinite(x)?x:null},esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function loadJson(k){try{return JSON.parse(localStorage.getItem(k)||'null')}catch{return null}}function saveJson(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch{return false}}
-function findBase(def,source=data){const aliases=def.aliases.map(norm);return source.find(b=>{const hay=norm([b?.name,b?.nickname,b?.base_name,b?.display_name].filter(Boolean).join(' '));return aliases.some(a=>hay===a||hay.includes(a))})||null}
-function rebuild(){bases=new Map(POBS.map(p=>[p.key,findBase(p,data)]));previousBases=new Map(POBS.map(p=>[p.key,findBase(p,previousData)]))}
-function hpRaw(b){return finite(b?.health??b?.base_health??b?.hitpoints)}function hp(b){const raw=hpRaw(b);if(raw===null)return null;return Math.max(0,Math.min(100,raw<=100?raw:raw/HEALTH_MAX*100))}function hpText(b){const x=hp(b);return x===null?'—':`${x>=99.95?x.toFixed(0):x.toFixed(1)}%`}function hpTone(b){const x=hp(b);return x===null?'muted':x<35?'danger':x<75?'warn':'good'}function creditsRaw(b){return finite(b?.money??b?.credits??b?.base_money)}function storageRaw(b){return finite(b?.cargospace??b?.cargo_space??b?.cargo_space_left??b?.storage_free)}
-function loc(b){if(!b)return'POB NOT FOUND IN CURRENT FEED';const pos=b?.pos??b?.base_pos??b?.position;let p='';if(typeof pos==='string')p=pos;else if(pos&&typeof pos==='object'){const vals=[finite(pos.x??pos.X),finite(pos.y??pos.Y),finite(pos.z??pos.Z)].filter(v=>v!==null);if(vals.length)p=vals.map(Math.round).join(' / ')}return[b?.region_name??b?.region,b?.system_name??b?.system,b?.sector_coord??b?.sector,p].map(v=>String(v??'').trim()).filter(Boolean).join(' // ')||'LOCATION DATA UNAVAILABLE'}
-function items(b){const x=b?.shop_items??b?.shopItems??b?.goods??[];return Array.isArray(x)?x:[]}function itemName(i){return String(i?.name??i?.good_name??i?.commodity_name??i?.nickname??i?.good??'UNKNOWN ITEM')}function itemKey(i){return norm(itemName(i))}function qty(i){return finite(i?.quantity??i?.amount??i?.stock)??0}function buy(i){return finite(i?.price_to_sell_to_base??i?.sell_price??i?.price_sell)}function sell(i){return finite(i?.price_to_buy_from_base??i?.buy_price??i?.price_buy)}function price(v){return v===null?'—':`${num.format(Math.round(v))} cr`}function itemByName(b,name){const key=norm(name);return items(b).find(i=>itemKey(i)===key)||null}
-function syncText(){if(!last)return'NO DATA';return`${mode==='cache'?'CACHE':'LIVE'} // ${last.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}`}function status(state,text){E.uplink.dataset.state=state;E.status.textContent=text;E.footer.textContent=text;E.freshness.textContent=last?syncText():text}
-function delta(c,p){return Number.isFinite(c)&&Number.isFinite(p)?c-p:null}function deltaMarkup(v,unit='',inverse=false){if(v===null||Math.abs(v)<.0001)return'<span data-tone="muted">NO CHANGE</span>';const positive=v>0,good=inverse?!positive:positive,sign=positive?'+':'−',abs=Math.abs(v),text=unit==='%'?abs.toFixed(1):num.format(Math.round(abs));return`<span data-tone="${good?'good':'danger'}">${sign}${text}${unit}</span>`}function setDelta(el,v,unit='',inverse=false){el.innerHTML=deltaMarkup(v,unit,inverse)}
-function maintenanceState(item,def){if(!item)return'danger';const q=qty(item);return q<def.critical?'danger':q<def.warn?'warn':'good'}function maintenanceStatus(item,def){const state=maintenanceState(item,def),q=item?qty(item):0;if(state==='danger')return q<=0?'DEPLETED':'CRITICAL RESERVE';if(state==='warn')return'LOW RESERVE';return'OPERATIONAL'}function baseMaintenance(b){return MAINT.map(def=>({def,item:itemByName(b,def.label),state:maintenanceState(itemByName(b,def.label),def)}))}function severity(s){return s==='danger'?2:s==='warn'?1:0}function worst(states){return states.reduce((a,b)=>severity(b)>severity(a)?b:a,'good')}
-function baseAlerts(def,b){const alerts=[];if(!b){alerts.push({tone:'danger',title:'NODE OFFLINE',detail:`${def.label} not found in current telemetry.`});return alerts}const h=hp(b);if(h!==null&&h<75)alerts.push({tone:h<35?'danger':'warn',title:'STRUCTURAL INTEGRITY',detail:`Facility health at ${hpText(b)}.`});baseMaintenance(b).forEach(({def,item,state})=>{if(state!=='good')alerts.push({tone:state,title:`${def.label.toUpperCase()} ${state==='danger'?'CRITICAL':'LOW'}`,detail:`${fmt(item?qty(item):0)} units in maintenance reserve.`})});return alerts}
-function watchlist(){const raw=loadJson(KEYS.watch);return Array.isArray(raw)?raw.filter(x=>x&&x.key&&x.label):[]}function setWatchlist(list){saveJson(KEYS.watch,list)}function isWatched(name){const k=norm(name);return watchlist().some(x=>x.key===k)}function toggleWatch(name){const key=norm(name),list=watchlist(),index=list.findIndex(x=>x.key===key);if(index>=0)list.splice(index,1);else list.push({key,label:String(name)});setWatchlist(list);render()}
-function totalMetric(getter,map=bases){let total=0,count=0;POBS.forEach(p=>{const b=map.get(p.key),v=b?getter(b):null;if(Number.isFinite(v)){total+=v;count++}});return count?total:null}function totalAlerts(){return POBS.reduce((sum,p)=>sum+baseAlerts(p,bases.get(p.key)).length,0)}
-function renderNetworkMetrics(){const found=POBS.filter(p=>bases.get(p.key)).length,alerts=totalAlerts();E.metricNodes.textContent=`${found}/4`;E.metricNodesSub.textContent=mode==='cache'?'CACHED NODE SNAPSHOT':found===4?'ALL NODES VERIFIED':`${4-found} NODE${4-found===1?'':'S'} MISSING`;const c=totalMetric(creditsRaw),pc=totalMetric(creditsRaw,previousBases),s=totalMetric(storageRaw),ps=totalMetric(storageRaw,previousBases);E.metricCredits.textContent=c===null?'—':cash(c);E.metricCreditsDelta.innerHTML=deltaMarkup(delta(c,pc));E.metricStorage.textContent=s===null?'—':fmt(s);E.metricStorageDelta.innerHTML=deltaMarkup(delta(s,ps));E.metricAlerts.textContent=String(alerts);E.metricAlertsSub.textContent=alerts?'ATTENTION REQUIRED':'NO ACTIVE ALERTS';const tone=found<4?'danger':alerts?'warn':'good';E.networkState.dataset.tone=tone;E.networkState.querySelector('strong').textContent=found<4?'NETWORK DEGRADED':alerts?'NODES ONLINE // ALERTS ACTIVE':'ALL NODES NOMINAL';E.networkState.querySelector('small').textContent=mode==='cache'?'CACHED NETWORK STATE':'NETWORK STATE'}
-function miniMaintenance(b){if(!b)return'<div class="maintenance-mini"><span data-tone="danger">NO FEED</span></div>';return`<div class="maintenance-mini">${baseMaintenance(b).map(({def,item,state})=>`<span data-tone="${state}" title="${esc(def.label)}">${def.code}<b>${fmt(item?qty(item):0)}</b></span>`).join('')}</div>`}
-function renderOverview(){E.overviewSync.textContent=syncText();renderNetworkMetrics();E.grid.innerHTML=POBS.map((p,index)=>{const b=bases.get(p.key),pb=previousBases.get(p.key),alerts=baseAlerts(p,b);if(!b)return`<article class="base-card" data-base-key="${p.key}" data-state="missing" tabindex="0" role="button"><span class="node-id">NODE 0${index+1}</span><div class="base-card-head"><div><h3>${esc(p.label)}</h3><p class="where">POB not found in current feed</p></div><span class="health-pill" data-tone="danger">OFFLINE</span></div>${miniMaintenance(null)}<div class="base-card-footer"><span>NO VERIFIED TELEMETRY</span><b>${alerts.length} ALERT</b></div></article>`;const cd=delta(creditsRaw(b),creditsRaw(pb)),sd=delta(storageRaw(b),storageRaw(pb)),hd=delta(hp(b),hp(pb));return`<article class="base-card" data-base-key="${p.key}" tabindex="0" role="button"><span class="node-id">NODE 0${index+1}</span><div class="base-card-head"><div><h3>${esc(p.label)}</h3><p class="where">${esc(loc(b))}</p></div><span class="health-pill" data-tone="${hpTone(b)}">${hpText(b)}</span></div><div class="base-card-stats"><div><small>CREDITS</small><strong>${cash(creditsRaw(b))}</strong><em>${deltaMarkup(cd)}</em></div><div><small>FREE STORAGE</small><strong>${fmt(storageRaw(b))}</strong><em>${deltaMarkup(sd)}</em></div><div><small>HEALTH Δ</small><strong>${hd===null?'—':deltaMarkup(hd,'%')}</strong></div></div>${miniMaintenance(b)}<div class="base-card-footer"><span>FACILITY MAINTENANCE</span><b data-tone="${alerts.length?'warn':'good'}">${alerts.length?`${alerts.length} ALERT${alerts.length===1?'':'S'}`:'NOMINAL'}</b></div></article>`}).join('');renderMatrix()}
-function matrixRows(){const rows=MAINT.map(x=>({key:x.key,label:x.label,maintenance:x}));watchlist().forEach(w=>{if(!rows.some(r=>r.key===w.key))rows.push({key:w.key,label:w.label,maintenance:null})});return rows}
-function renderMatrix(){const rows=matrixRows();E.matrix.innerHTML=`<div class="matrix-table"><div class="matrix-row matrix-head"><span>COMMODITY</span>${POBS.map(p=>`<span>${esc(p.short)}</span>`).join('')}</div>${rows.map(row=>`<div class="matrix-row"><strong>${esc(row.label)}${row.maintenance?'<small>MAINT</small>':'<small>WATCH</small>'}</strong>${POBS.map(p=>{const b=bases.get(p.key),item=b?itemByName(b,row.label):null,state=row.maintenance?maintenanceState(item,row.maintenance):(item?'good':'muted');return`<button type="button" data-matrix-base="${p.key}" data-matrix-item="${esc(row.label)}" data-tone="${state}"><b>${item?fmt(qty(item)):'—'}</b><small>${row.maintenance?maintenanceStatus(item,row.maintenance):(item?'STOCK':'UNLISTED')}</small></button>`}).join('')}</div>`).join('')}</div>`}
-function renderMaintenance(b){const rows=baseMaintenance(b),state=worst(rows.map(r=>r.state));E.facilityState.dataset.tone=state;E.facilityState.textContent=state==='danger'?'ACTION REQUIRED':state==='warn'?'RESERVE WATCH':'FACILITY NOMINAL';E.maintenance.innerHTML=rows.map(({def,item,state})=>{const q=item?qty(item):0,pct=Math.min(100,Math.max(0,q/def.warn*100)),pi=previousBases.get(view)?itemByName(previousBases.get(view),def.label):null,d=delta(q,pi?qty(pi):null);return`<article class="maintenance-card" data-tone="${state}"><div class="maintenance-title"><div><small>${def.code} // DAILY FACILITY SUPPLY</small><strong>${esc(def.label)}</strong></div><span>${maintenanceStatus(item,def)}</span></div><div class="maintenance-value"><b>${fmt(q)}</b><em>units</em><span>${deltaMarkup(d)}</span></div><div class="maintenance-meter"><i style="width:${pct}%"></i><mark></mark></div><div class="maintenance-thresholds"><span>CRITICAL &lt; ${fmt(def.critical)}</span><span>LOW &lt; ${fmt(def.warn)}</span></div></article>`}).join('')}
-function renderPriority(def,b){const list=baseAlerts(def,b);E.priorityCount.textContent=`${list.length} ALERT${list.length===1?'':'S'}`;E.priorityCount.dataset.tone=list.some(x=>x.tone==='danger')?'danger':list.length?'warn':'good';E.priority.innerHTML=list.length?list.map((a,i)=>`<article data-tone="${a.tone}"><span>0${i+1}</span><div><strong>${esc(a.title)}</strong><p>${esc(a.detail)}</p></div></article>`).join(''):`<div class="priority-empty"><i></i><div><strong>NO ACTIVE ALERTS</strong><span>Facility health and maintenance reserves are nominal.</span></div></div>`}
-function renderWatch(b){const list=watchlist();E.watchCount.textContent=`${list.length} WATCHED`;if(!list.length){E.watchGrid.innerHTML='<div class="watch-empty">WATCHLIST EMPTY <small>Star cargo in the manifest to pin it here.</small></div>';return}const pb=previousBases.get(view);E.watchGrid.innerHTML=list.map(w=>{const item=itemByName(b,w.label),pi=pb?itemByName(pb,w.label):null,q=item?qty(item):0,d=delta(q,pi?qty(pi):null);return`<article class="watch-card"><button class="watch-remove" type="button" data-unwatch="${esc(w.label)}" aria-label="Remove ${esc(w.label)} from watchlist">×</button><small>WATCHED CARGO</small><strong>${esc(w.label)}</strong><b>${fmt(q)}</b><span>${deltaMarkup(d)}</span></article>`}).join('')}
-function inventoryItemDelta(name,current){const pb=previousBases.get(view),pi=pb?itemByName(pb,name):null;return delta(current,pi?qty(pi):null)}
-function renderItems(b){const query=norm(E.search.value),watched=new Set(watchlist().map(x=>x.key));let list=items(b);list=list.filter(i=>{const key=itemKey(i),qmatch=!query||key.includes(query);if(!qmatch)return false;if(inventoryFilter==='watch')return watched.has(key);if(inventoryFilter==='buy')return(buy(i)??0)>0;if(inventoryFilter==='sell')return(sell(i)??0)>0;return true}).sort((a,b)=>itemName(a).localeCompare(itemName(b),'de'));E.body.innerHTML=list.map(i=>{const name=itemName(i),q=qty(i),d=inventoryItemDelta(name,q),star=watched.has(itemKey(i));return`<tr><td data-label="WATCH"><button class="watch-toggle${star?' active':''}" type="button" data-watch="${esc(name)}" aria-label="${star?'Remove':'Add'} ${esc(name)} ${star?'from':'to'} watchlist">★</button></td><td class="item-name" data-label="WARE">${esc(name)}</td><td data-label="MENGE">${fmt(q)}</td><td class="muted" data-label="BASE KAUFT">${esc(price(buy(i)))}</td><td class="muted" data-label="BASE VERKAUFT">${esc(price(sell(i)))}</td><td data-label="Δ STOCK">${deltaMarkup(d)}</td></tr>`}).join('');E.empty.hidden=list.length>0}
-function renderDetail(key){const def=POBS.find(p=>p.key===key),b=bases.get(key),pb=previousBases.get(key);E.kicker.textContent=`POB NODE // ${mode==='cache'?'CACHED':'LIVE'}`;E.name.textContent=def?.label??'UNKNOWN POB';E.location.textContent=loc(b);E.sync.textContent=last?last.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):'—';E.syncMode.textContent=mode==='cache'?'LAST VERIFIED CACHE':'LIVE DARKSTAT SNAPSHOT';if(!b){E.badge.dataset.tone='danger';E.badge.textContent='OFFLINE';E.health.textContent='—';E.meter.style.width='0';E.credits.textContent='—';E.storage.textContent='—';[E.healthDelta,E.creditsDelta,E.storageDelta].forEach(x=>x.textContent='NO DATA');E.detailDelta.textContent='NODE NOT FOUND IN CURRENT FEED';renderMaintenance(null);renderPriority(def,null);renderWatch(null);renderItems(null);return}const h=hp(b),ht=hpTone(b),hd=delta(h,hp(pb)),cd=delta(creditsRaw(b),creditsRaw(pb)),sd=delta(storageRaw(b),storageRaw(pb));E.badge.dataset.tone=ht;E.badge.textContent=hpText(b);E.health.textContent=hpText(b);E.meter.style.width=`${h??0}%`;E.meter.dataset.tone=ht;E.credits.textContent=cash(creditsRaw(b));E.storage.textContent=fmt(storageRaw(b));setDelta(E.healthDelta,hd,'%',false);setDelta(E.creditsDelta,cd);setDelta(E.storageDelta,sd);const changes=[hd!==null&&Math.abs(hd)>.01,cd!==null&&Math.abs(cd)>=1,sd!==null&&Math.abs(sd)>=1].filter(Boolean).length;E.detailDelta.textContent=pb?`${changes} CORE METRIC CHANGE${changes===1?'':'S'} SINCE PREVIOUS SNAPSHOT`:'NO PREVIOUS SNAPSHOT FOR COMPARISON';renderMaintenance(b);renderPriority(def,b);renderWatch(b);renderItems(b)}
-function render(){renderOverview();const detail=view!=='overview';E.overview.hidden=detail;E.detail.hidden=!detail;E.tabs.querySelectorAll('.tab').forEach(btn=>btn.classList.toggle('active',btn.dataset.view===view));if(detail)renderDetail(view);updateSystem()}
-function show(next,itemSearch=''){view=POBS.some(p=>p.key===next)?next:'overview';saveJson(KEYS.view,view);E.search.value=itemSearch;inventoryFilter='all';E.filters.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.filter==='all'));render();scrollTo({top:0,behavior:'smooth'})}
-function hydrateLatest(){const live=loadJson(KEYS.live),prev=loadJson(KEYS.previous);if(!Array.isArray(live?.data))return false;data=live.data;previousData=Array.isArray(prev?.data)?prev.data:[];last=live.savedAt?new Date(live.savedAt):new Date();mode='cache';rebuild();status('cache','CACHED DATA');render();return true}
-function persistLive(nextData){const current=loadJson(KEYS.live);if(Array.isArray(current?.data))saveJson(KEYS.previous,current);saveJson(KEYS.live,{savedAt:new Date().toISOString(),data:nextData});previousData=Array.isArray(current?.data)?current.data:(loadJson(KEYS.previous)?.data||[])}
-async function request(){const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),TIMEOUT_MS);try{return await fetch(API,{method:'POST',headers:{Accept:'application/json'},signal:controller.signal})}finally{clearTimeout(timeout)}}
-async function load(){if(timer)clearTimeout(timer);E.refresh.disabled=true;E.error.hidden=true;status('loading','SYNCING');try{const response=await request();if(!response.ok)throw new Error(`Darkstat HTTP ${response.status}`);const next=await response.json();if(!Array.isArray(next))throw new Error('Invalid POB response');persistLive(next);data=next;last=new Date();mode='live';rebuild();const found=POBS.filter(p=>bases.get(p.key)).length;status('live',`${found}/4 NODES LIVE`);render()}catch(err){if(hydrateLatest()){E.error.hidden=false;E.errorText.textContent='Live uplink failed. Last verified snapshot remains active.'}else{mode='none';status('error','UPLINK FAILED');E.error.hidden=false;E.errorText.textContent=err?.name==='AbortError'?'Darkstat timeout after 18 seconds.':String(err?.message||'Darkstat unavailable.');render()}}finally{E.refresh.disabled=false;timer=setTimeout(load,REFRESH_MS)}}
-function storageCheck(){const key=`dtr:probe:${Date.now()}`;try{localStorage.setItem(key,'ok');const ok=localStorage.getItem(key)==='ok';localStorage.removeItem(key);return ok}catch{return false}}function pwaStandalone(){return matchMedia('(display-mode: standalone)').matches||navigator.standalone===true}
-function systemChecks(){const found=POBS.filter(p=>bases.get(p.key)).length,store=storageCheck();return[{label:'NETWORK',tone:navigator.onLine?'good':'warn',status:navigator.onLine?'ONLINE':'OFFLINE',detail:navigator.onLine?'Network access available.':'Cached telemetry only.'},{label:'DARKSTAT',tone:mode==='live'?'good':mode==='cache'?'warn':'danger',status:mode==='live'?'LIVE':mode==='cache'?'CACHE ACTIVE':'NO DATA',detail:last?`Last verified ${last.toLocaleTimeString('de-DE')}.`:'No verified snapshot.'},{label:'POB NODES',tone:found===4?'good':'danger',status:`${found}/4 FOUND`,detail:found===4?'All configured nodes resolved.':`${4-found} node(s) missing from current feed.`},{label:'LOCAL CACHE',tone:store?'good':'danger',status:store?'READY':'UNAVAILABLE',detail:'Last-good data and watchlist storage.'},{label:'APP SHELL',tone:pwaStandalone()||registration?'good':'warn',status:pwaStandalone()?'INSTALLED':registration?'OFFLINE READY':'BROWSER ONLY',detail:pwaStandalone()?'Running standalone.':'PWA shell status.'}]}
-function updateSystem(){if(!E.systemGrid)return;const checks=systemChecks(),danger=checks.filter(x=>x.tone==='danger').length,warn=checks.filter(x=>x.tone==='warn').length;E.systemGrid.innerHTML=checks.map(x=>`<article data-tone="${x.tone}"><small>${x.label}</small><strong>${x.status}</strong><span>${x.detail}</span></article>`).join('');E.systemOverall.dataset.tone=danger?'danger':warn?'warn':'good';E.systemOverall.querySelector('strong').textContent=danger?'ATTENTION REQUIRED':warn?'CORE SYSTEMS NOMINAL':'ALL SYSTEMS NOMINAL';E.systemOverall.querySelector('span').textContent=danger?`${danger} blocking check(s).`:warn?`${warn} status notice(s).`:'No active system notices.'}
-function openSystem(){updateSystem();E.systemPanel.hidden=false;document.body.classList.add('modal-open');E.systemClose.focus()}function closeSystem(){E.systemPanel.hidden=true;document.body.classList.remove('modal-open');E.systemButton.focus()}
-function manualInstall(){const ua=navigator.userAgent;if(/SamsungBrowser/i.test(ua))return{title:'INSTALL DTR IN SAMSUNG INTERNET',message:'Open the Samsung Internet menu (☰), then choose Add page to → Home screen.'};if(/iPhone|iPad|iPod/i.test(ua))return{title:'INSTALL DTR ON IPHONE / IPAD',message:'Open DTR in Safari, tap Share, then choose Add to Home Screen.'};if(/Android/i.test(ua))return{title:'INSTALL DTR ON ANDROID',message:'Open the browser menu (⋮), then choose Install app or Add to Home screen.'};return{title:'INSTALL DTR',message:'Open your browser menu and choose Install app or Add to Home screen.'}}
-function showInstall(){if(pwaStandalone())return;const manual=manualInstall();E.installTitle.textContent=installPrompt?'INSTALL DTR COMMAND APP':manual.title;E.installMessage.textContent=installPrompt?'Add DTR to this device for a standalone command window and offline-ready shell.':manual.message;E.installPrimary.textContent=installPrompt?'INSTALL APP':'GOT IT';E.installSheet.hidden=false;document.body.classList.add('modal-open')}
-async function doInstall(){if(!installPrompt){E.installSheet.hidden=true;document.body.classList.remove('modal-open');return}try{await installPrompt.prompt();await installPrompt.userChoice}catch{}installPrompt=null;E.installSheet.hidden=true;document.body.classList.remove('modal-open');syncInstallButton()}
-function syncInstallButton(){const installed=pwaStandalone();E.installButton.hidden=installed;E.systemInstall.hidden=installed}
-async function registerPwa(){if(!('serviceWorker'in navigator))return;try{registration=await navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'});updateSystem()}catch{}}
-function updateClock(){E.clock.textContent=new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}function connectionState(){E.offline.hidden=navigator.onLine;if(!navigator.onLine&&mode==='live'){mode='cache';status('cache','OFFLINE // CACHE')}updateSystem()}
-E.tabs.addEventListener('click',e=>{const b=e.target.closest('.tab');if(b)show(b.dataset.view)});E.grid.addEventListener('click',e=>{const c=e.target.closest('[data-base-key]');if(c)show(c.dataset.baseKey)});E.grid.addEventListener('keydown',e=>{if(!['Enter',' '].includes(e.key))return;const c=e.target.closest('[data-base-key]');if(c){e.preventDefault();show(c.dataset.baseKey)}});E.matrix.addEventListener('click',e=>{const b=e.target.closest('[data-matrix-base]');if(b)show(b.dataset.matrixBase,b.dataset.matrixItem)});E.search.addEventListener('input',()=>view!=='overview'&&renderItems(bases.get(view)));E.filters.addEventListener('click',e=>{const b=e.target.closest('[data-filter]');if(!b)return;inventoryFilter=b.dataset.filter;E.filters.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));renderItems(bases.get(view))});E.body.addEventListener('click',e=>{const b=e.target.closest('[data-watch]');if(b)toggleWatch(b.dataset.watch)});E.watchGrid.addEventListener('click',e=>{const b=e.target.closest('[data-unwatch]');if(b)toggleWatch(b.dataset.unwatch)});E.refresh.addEventListener('click',load);E.systemButton.addEventListener('click',openSystem);E.systemClose.addEventListener('click',closeSystem);E.systemRefresh.addEventListener('click',updateSystem);E.systemPanel.addEventListener('click',e=>{if(e.target===E.systemPanel)closeSystem()});E.installButton.addEventListener('click',showInstall);E.systemInstall.addEventListener('click',showInstall);E.installClose.addEventListener('click',()=>{E.installSheet.hidden=true;document.body.classList.remove('modal-open')});E.installPrimary.addEventListener('click',doInstall);addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;syncInstallButton()});addEventListener('appinstalled',()=>{installPrompt=null;E.installSheet.hidden=true;document.body.classList.remove('modal-open');syncInstallButton()});addEventListener('online',()=>{connectionState();load()});addEventListener('offline',connectionState);addEventListener('keydown',e=>{if(e.key==='Escape'){if(!E.systemPanel.hidden)closeSystem();if(!E.installSheet.hidden){E.installSheet.hidden=true;document.body.classList.remove('modal-open')}}});
-setInterval(updateClock,1000);updateClock();syncInstallButton();registerPwa();connectionState();hydrateLatest();render();load();
+(() => {
+  'use strict';
+
+  const API = 'https://darkstat.dd84ai.com/api/pobs';
+  const LOCALE = 'en-GB';
+  const HEALTH_MAX = 24000000;
+  const REFRESH_MS = 5 * 60 * 1000;
+  const TIMEOUT_MS = 18000;
+  const STALE_WARN_MS = 15 * 60 * 1000;
+  const STALE_DANGER_MS = 60 * 60 * 1000;
+
+  const KEYS = Object.freeze({
+    live: 'dtr:pobs:live:v2',
+    previous: 'dtr:pobs:previous:v2',
+    watch: 'dtr:watchlist:v1',
+    view: 'dtr:view:v1',
+    recoveries: 'dtr:storage-recoveries:v1'
+  });
+
+  const POBS = Object.freeze([
+    { key: 'deterrence-sanctum', short: 'SANCTUM', label: 'Deterrence Sanctum', aliases: ['deterrence sanctum'] },
+    { key: 'ravenna-invicta', short: 'INVICTA', label: 'Ravenna Invicta', aliases: ['ravenna invicta', 'invicta'] },
+    { key: 'forja-del-vacio', short: 'FORJA', label: 'Forja del Vacio', aliases: ['forja del vacio', 'forja del vacío'] },
+    { key: 'fort-torrelavega', short: 'TORRELAVEGA', label: 'Fort Torrelavega', aliases: ['fort torrelavega', 'torrelavega'] }
+  ]);
+
+  const MAINT = Object.freeze([
+    { key: 'basic alloy', label: 'Basic Alloy', code: 'ALLOY', critical: 2500, warn: 15000 },
+    { key: 'food rations', label: 'Food Rations', code: 'FOOD', critical: 2500, warn: 15000 },
+    { key: 'consumer goods', label: 'Consumer Goods', code: 'GOODS', critical: 2500, warn: 15000 }
+  ]);
+
+  const VALID_VIEWS = new Set(['overview', ...POBS.map(pob => pob.key)]);
+  const numberFormat = new Intl.NumberFormat(LOCALE);
+  const $ = id => document.getElementById(id);
+  const E = {
+    uplink: $('uplink'),
+    status: $('statusText'),
+    refresh: $('refreshButton'),
+    tabs: $('tabs'),
+    overview: $('overviewView'),
+    detail: $('detailView'),
+    grid: $('overviewGrid'),
+    overviewSync: $('overviewSync'),
+    networkState: $('networkState'),
+    metricNodes: $('metricNodes'),
+    metricNodesSub: $('metricNodesSub'),
+    metricCredits: $('metricCredits'),
+    metricCreditsDelta: $('metricCreditsDelta'),
+    metricStorage: $('metricStorage'),
+    metricStorageDelta: $('metricStorageDelta'),
+    metricAlerts: $('metricAlerts'),
+    metricAlertsSub: $('metricAlertsSub'),
+    matrix: $('networkMatrix'),
+    kicker: $('detailKicker'),
+    name: $('detailName'),
+    location: $('detailLocation'),
+    badge: $('detailHealthBadge'),
+    detailDelta: $('detailDelta'),
+    health: $('healthValue'),
+    meter: $('healthMeter'),
+    healthDelta: $('healthDelta'),
+    credits: $('creditsValue'),
+    creditsDelta: $('creditsDelta'),
+    storage: $('storageValue'),
+    storageDelta: $('storageDelta'),
+    sync: $('syncValue'),
+    syncMode: $('syncMode'),
+    maintenance: $('maintenanceGrid'),
+    facilityState: $('facilityState'),
+    priority: $('priorityList'),
+    priorityCount: $('priorityCount'),
+    watchGrid: $('watchGrid'),
+    watchCount: $('watchCount'),
+    search: $('inventorySearch'),
+    filters: $('inventoryFilters'),
+    body: $('inventoryBody'),
+    empty: $('inventoryEmpty'),
+    error: $('errorView'),
+    errorText: $('errorText'),
+    footer: $('footerState'),
+    freshness: $('headerFreshness'),
+    clock: $('headerClock'),
+    offline: $('offlineBanner'),
+    systemButton: $('systemButton'),
+    systemPanel: $('systemPanel'),
+    systemClose: $('systemClose'),
+    systemRefresh: $('systemRefresh')
+  };
+
+  let data = [];
+  let previousData = [];
+  let bases = new Map();
+  let previousBases = new Map();
+  let view = readView();
+  let last = null;
+  let mode = 'none';
+  let inventoryFilter = 'all';
+  let refreshTimer = null;
+  let nextRefreshAt = 0;
+  let loadInFlight = null;
+  let lastError = '';
+  let systemReturnFocus = null;
+  const storageFaults = [];
+
+  const norm = value => String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+  const finite = value => {
+    if (value === null || value === undefined || value === '') return null;
+    const converted = Number(value);
+    return Number.isFinite(converted) ? converted : null;
+  };
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[character]);
+  const fmt = value => Number.isFinite(value) ? numberFormat.format(Math.round(value)) : '—';
+  const cash = value => Number.isFinite(value) ? `${fmt(value)} cr` : '—';
+
+  function rememberStorageFault(action, key, error) {
+    storageFaults.push({
+      action,
+      key,
+      at: Date.now(),
+      message: String(error?.message || error || 'Storage unavailable')
+    });
+    if (storageFaults.length > 12) storageFaults.shift();
+  }
+
+  function storageGet(key) {
+    try {
+      return localStorage.getItem(key);
+    } catch (error) {
+      rememberStorageFault('read', key, error);
+      return null;
+    }
+  }
+
+  function storageSet(key, value) {
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch (error) {
+      rememberStorageFault('write', key, error);
+      return false;
+    }
+  }
+
+  function recoveryIndex() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(KEYS.recoveries) || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function recoverMalformedJson(key, raw) {
+    const at = Date.now();
+    const backupKey = `dtr:recovery:${at}:${key.replace(/[^a-z0-9]+/gi, '-')}`;
+    try {
+      localStorage.setItem(backupKey, JSON.stringify({
+        schemaVersion: 1,
+        originalKey: key,
+        recoveredAt: new Date(at).toISOString(),
+        raw
+      }));
+      localStorage.removeItem(key);
+      const index = recoveryIndex();
+      index.push({ key, backupKey, at });
+      localStorage.setItem(KEYS.recoveries, JSON.stringify(index.slice(-12)));
+    } catch (error) {
+      rememberStorageFault('recover', key, error);
+    }
+  }
+
+  function loadJson(key) {
+    const raw = storageGet(key);
+    if (raw === null) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      recoverMalformedJson(key, raw);
+      return null;
+    }
+  }
+
+  function saveJson(key, value) {
+    return storageSet(key, JSON.stringify(value));
+  }
+
+  function readView() {
+    let saved = 'overview';
+    try {
+      saved = localStorage.getItem(KEYS.view) || 'overview';
+    } catch {
+      return 'overview';
+    }
+    if (VALID_VIEWS.has(saved)) return saved;
+    try {
+      localStorage.setItem(KEYS.view, 'overview');
+    } catch {}
+    return 'overview';
+  }
+
+  function formatClock(value, seconds = true) {
+    if (!(value instanceof Date) || !Number.isFinite(value.getTime())) return '--:--';
+    return value.toLocaleTimeString(LOCALE, {
+      hour: '2-digit',
+      minute: '2-digit',
+      ...(seconds ? { second: '2-digit' } : {}),
+      hour12: false
+    });
+  }
+
+  function ageMs(value = last) {
+    if (!(value instanceof Date) || !Number.isFinite(value.getTime())) return Infinity;
+    return Math.max(0, Date.now() - value.getTime());
+  }
+
+  function ageText(value = last) {
+    const age = ageMs(value);
+    if (!Number.isFinite(age)) return 'NO VERIFIED SNAPSHOT';
+    if (age < 60 * 1000) return 'JUST NOW';
+    const minutes = Math.floor(age / (60 * 1000));
+    if (minutes < 60) return `${minutes} MIN AGO`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} H AGO`;
+    const days = Math.floor(hours / 24);
+    return `${days} D AGO`;
+  }
+
+  function freshnessTone() {
+    const age = ageMs();
+    if (!Number.isFinite(age)) return 'muted';
+    if (age >= STALE_DANGER_MS) return 'danger';
+    if (age >= STALE_WARN_MS || mode === 'cache') return 'warn';
+    return 'good';
+  }
+
+  function syncText() {
+    if (!last) return 'NO DATA';
+    const source = mode === 'cache' ? 'CACHE' : 'LIVE';
+    return `${source} // ${formatClock(last, false)} // ${ageText(last)}`;
+  }
+
+  function emitState(reason) {
+    window.dispatchEvent(new CustomEvent('dtr:statechange', {
+      detail: {
+        reason,
+        mode,
+        view,
+        last: last?.toISOString?.() || null,
+        loading: Boolean(loadInFlight),
+        storageFaults: storageFaults.length
+      }
+    }));
+  }
+
+  function status(state, text) {
+    E.uplink.dataset.state = state;
+    E.status.textContent = text;
+    E.footer.textContent = text;
+    E.freshness.textContent = last ? syncText() : text;
+    E.freshness.dataset.tone = last ? freshnessTone() : 'muted';
+  }
+
+  function findBase(definition, source = data) {
+    const aliases = definition.aliases.map(norm);
+    return source.find(base => {
+      const haystack = norm([
+        base?.name,
+        base?.nickname,
+        base?.base_name,
+        base?.display_name
+      ].filter(Boolean).join(' '));
+      return aliases.some(alias => haystack === alias || haystack.includes(alias));
+    }) || null;
+  }
+
+  function rebuild() {
+    bases = new Map(POBS.map(pob => [pob.key, findBase(pob, data)]));
+    previousBases = new Map(POBS.map(pob => [pob.key, findBase(pob, previousData)]));
+  }
+
+  function hpRaw(base) {
+    return finite(base?.health ?? base?.base_health ?? base?.hitpoints);
+  }
+
+  function hp(base) {
+    const raw = hpRaw(base);
+    if (raw === null) return null;
+    return Math.max(0, Math.min(100, raw <= 100 ? raw : raw / HEALTH_MAX * 100));
+  }
+
+  function hpText(base) {
+    const value = hp(base);
+    return value === null ? '—' : `${value >= 99.95 ? value.toFixed(0) : value.toFixed(1)}%`;
+  }
+
+  function hpTone(base) {
+    const value = hp(base);
+    return value === null ? 'muted' : value < 35 ? 'danger' : value < 75 ? 'warn' : 'good';
+  }
+
+  function creditsRaw(base) {
+    return finite(base?.money ?? base?.credits ?? base?.base_money);
+  }
+
+  function storageRaw(base) {
+    return finite(base?.cargospace ?? base?.cargo_space ?? base?.cargo_space_left ?? base?.storage_free);
+  }
+
+  function loc(base) {
+    if (!base) return 'POB NOT FOUND IN CURRENT FEED';
+    const position = base?.pos ?? base?.base_pos ?? base?.position;
+    let renderedPosition = '';
+    if (typeof position === 'string') {
+      renderedPosition = position;
+    } else if (position && typeof position === 'object') {
+      const values = [
+        finite(position.x ?? position.X),
+        finite(position.y ?? position.Y),
+        finite(position.z ?? position.Z)
+      ].filter(value => value !== null);
+      if (values.length) renderedPosition = values.map(Math.round).join(' / ');
+    }
+    return [
+      base?.region_name ?? base?.region,
+      base?.system_name ?? base?.system,
+      base?.sector_coord ?? base?.sector,
+      renderedPosition
+    ].map(value => String(value ?? '').trim()).filter(Boolean).join(' // ') || 'LOCATION DATA UNAVAILABLE';
+  }
+
+  function items(base) {
+    const list = base?.shop_items ?? base?.shopItems ?? base?.goods ?? [];
+    return Array.isArray(list) ? list : [];
+  }
+
+  function itemName(item) {
+    return String(
+      item?.name ??
+      item?.good_name ??
+      item?.commodity_name ??
+      item?.nickname ??
+      item?.good ??
+      'UNKNOWN ITEM'
+    );
+  }
+
+  function itemKey(item) {
+    return norm(itemName(item));
+  }
+
+  function qty(item) {
+    if (!item) return null;
+    return finite(item?.quantity ?? item?.amount ?? item?.stock);
+  }
+
+  function buy(item) {
+    return finite(item?.price_to_sell_to_base ?? item?.sell_price ?? item?.price_sell);
+  }
+
+  function sell(item) {
+    return finite(item?.price_to_buy_from_base ?? item?.buy_price ?? item?.price_buy);
+  }
+
+  function price(value) {
+    return value === null ? '—' : `${fmt(value)} cr`;
+  }
+
+  function itemByName(base, name) {
+    const key = norm(name);
+    return items(base).find(item => itemKey(item) === key) || null;
+  }
+
+  function boundary(item) {
+    const min = finite(item?.min_stock ?? item?.min);
+    const max = finite(
+      item?.max_stock ??
+      item?.max ??
+      item?.maxStock ??
+      item?.max_quantity ??
+      item?.maxQuantity
+    );
+    return {
+      min,
+      max,
+      valid: min !== null && max !== null && max > 0 && min >= 0 && min <= max
+    };
+  }
+
+  function stockState(item, fallback = null) {
+    const quantity = qty(item);
+    if (quantity === null) return 'muted';
+    const bounds = boundary(item);
+    if (bounds.valid) {
+      if (quantity < bounds.min) return 'danger';
+      if (bounds.min > 0 && quantity < bounds.min * 1.25) return 'warn';
+      return 'good';
+    }
+    if (fallback) {
+      if (quantity < fallback.critical) return 'danger';
+      if (quantity < fallback.warn) return 'warn';
+      return 'good';
+    }
+    return 'muted';
+  }
+
+  function stockMarkup(item, compact = false) {
+    const quantity = qty(item);
+    const bounds = boundary(item);
+    if (quantity === null || !bounds.valid) {
+      return '<span class="stock-unavailable" aria-label="Stock limits unavailable">—</span>';
+    }
+    const tone = stockState(item);
+    const fill = Math.max(0, Math.min(100, quantity / bounds.max * 100));
+    const marker = Math.max(0, Math.min(100, bounds.min / bounds.max * 100));
+    const label = `Quantity ${fmt(quantity)}, minimum ${fmt(bounds.min)}, maximum ${fmt(bounds.max)}`;
+    return `<div class="stock-level${compact ? ' compact' : ''}" data-tone="${tone}" role="img" aria-label="${esc(label)}"><div class="stock-range"><span>MIN ${fmt(bounds.min)}</span><span>MAX ${fmt(bounds.max)}</span></div><div class="stock-track"><i style="width:${fill}%"></i><mark style="left:${marker}%"></mark></div></div>`;
+  }
+
+  function delta(current, previous) {
+    return Number.isFinite(current) && Number.isFinite(previous) ? current - previous : null;
+  }
+
+  function deltaMarkup(value, unit = '', inverse = false) {
+    if (value === null || Math.abs(value) < 0.0001) return '<span data-tone="muted">NO CHANGE</span>';
+    const positive = value > 0;
+    const good = inverse ? !positive : positive;
+    const sign = positive ? '+' : '−';
+    const absolute = Math.abs(value);
+    const rendered = unit === '%' ? absolute.toFixed(1) : fmt(absolute);
+    return `<span data-tone="${good ? 'good' : 'danger'}">${sign}${rendered}${unit}</span>`;
+  }
+
+  function setDelta(element, value, unit = '', inverse = false) {
+    element.innerHTML = deltaMarkup(value, unit, inverse);
+  }
+
+  function maintenanceState(item, definition) {
+    return stockState(item, definition);
+  }
+
+  function maintenanceStatus(item, definition) {
+    const quantity = qty(item);
+    if (quantity === null) return 'NO TELEMETRY';
+    const state = maintenanceState(item, definition);
+    if (state === 'danger') return 'CRITICAL RESERVE';
+    if (state === 'warn') return 'LOW RESERVE';
+    return 'OPERATIONAL';
+  }
+
+  function baseMaintenance(base) {
+    return MAINT.map(definition => {
+      const item = itemByName(base, definition.label);
+      return { definition, item, state: maintenanceState(item, definition) };
+    });
+  }
+
+  function severity(state) {
+    return state === 'danger' ? 3 : state === 'warn' ? 2 : state === 'muted' ? 1 : 0;
+  }
+
+  function worst(states) {
+    return states.reduce((current, candidate) => severity(candidate) > severity(current) ? candidate : current, 'good');
+  }
+
+  function watchlist() {
+    const raw = loadJson(KEYS.watch);
+    return Array.isArray(raw) ? raw.filter(entry => entry && entry.key && entry.label) : [];
+  }
+
+  function setWatchlist(list) {
+    return saveJson(KEYS.watch, list);
+  }
+
+  function toggleWatch(name) {
+    const key = norm(name);
+    const list = watchlist();
+    const index = list.findIndex(entry => entry.key === key);
+    if (index >= 0) list.splice(index, 1);
+    else list.push({ key, label: String(name) });
+    setWatchlist(list);
+    render();
+    emitState('watchlist');
+  }
+
+  function baseAlerts(definition, base) {
+    const alerts = [];
+    if (!base) {
+      alerts.push({
+        tone: 'danger',
+        title: 'NODE OFFLINE',
+        detail: `${definition.label} was not found in the current telemetry.`
+      });
+      return alerts;
+    }
+
+    const health = hp(base);
+    if (health === null) {
+      alerts.push({
+        tone: 'warn',
+        title: 'HEALTH NOT REPORTED',
+        detail: 'Structural integrity is unavailable in the current telemetry.'
+      });
+    } else if (health < 75) {
+      alerts.push({
+        tone: health < 35 ? 'danger' : 'warn',
+        title: 'STRUCTURAL INTEGRITY',
+        detail: `Facility health is ${hpText(base)}.`
+      });
+    }
+
+    baseMaintenance(base).forEach(({ definition: supply, item, state }) => {
+      const quantity = qty(item);
+      if (quantity === null) {
+        alerts.push({
+          tone: 'warn',
+          title: `${supply.label.toUpperCase()} NOT REPORTED`,
+          detail: 'The current feed does not contain a verified quantity.'
+        });
+      } else if (state !== 'good') {
+        alerts.push({
+          tone: state,
+          title: `${supply.label.toUpperCase()} ${state === 'danger' ? 'CRITICAL' : 'LOW'}`,
+          detail: `${fmt(quantity)} units remain in the maintenance reserve.`
+        });
+      }
+    });
+
+    const maintenanceKeys = new Set(MAINT.map(item => item.key));
+    watchlist().forEach(watched => {
+      if (maintenanceKeys.has(watched.key)) return;
+      const item = itemByName(base, watched.label);
+      if (!item || !boundary(item).valid) return;
+      const state = stockState(item);
+      if (state === 'danger' || state === 'warn') {
+        alerts.push({
+          tone: state,
+          title: `${watched.label.toUpperCase()} WATCH ALERT`,
+          detail: `${fmt(qty(item))} units remain against the configured stock limits.`
+        });
+      }
+    });
+
+    return alerts;
+  }
+
+  function totalMetric(getter, map = bases) {
+    let total = 0;
+    let count = 0;
+    POBS.forEach(pob => {
+      const base = map.get(pob.key);
+      const value = base ? getter(base) : null;
+      if (Number.isFinite(value)) {
+        total += value;
+        count += 1;
+      }
+    });
+    return count ? total : null;
+  }
+
+  function totalAlerts() {
+    return POBS.reduce((sum, pob) => sum + baseAlerts(pob, bases.get(pob.key)).length, 0);
+  }
+
+  function renderNetworkMetrics() {
+    if (!last && mode === 'none') {
+      E.metricNodes.textContent = '—';
+      E.metricNodesSub.textContent = 'NO VERIFIED FEED';
+      E.metricCredits.textContent = '—';
+      E.metricCreditsDelta.innerHTML = '<span data-tone="muted">NO BASELINE</span>';
+      E.metricStorage.textContent = '—';
+      E.metricStorageDelta.innerHTML = '<span data-tone="muted">NO BASELINE</span>';
+      E.metricAlerts.textContent = '—';
+      E.metricAlertsSub.textContent = 'AWAITING TELEMETRY';
+      E.networkState.dataset.tone = 'muted';
+      E.networkState.querySelector('strong').textContent = 'AWAITING DATA';
+      E.networkState.querySelector('small').textContent = 'NETWORK STATE';
+      return;
+    }
+
+    const found = POBS.filter(pob => bases.get(pob.key)).length;
+    const alerts = totalAlerts();
+    const credits = totalMetric(creditsRaw);
+    const previousCredits = totalMetric(creditsRaw, previousBases);
+    const storage = totalMetric(storageRaw);
+    const previousStorage = totalMetric(storageRaw, previousBases);
+
+    E.metricNodes.textContent = `${found}/4`;
+    E.metricNodesSub.textContent = mode === 'cache'
+      ? `CACHED SNAPSHOT // ${ageText()}`
+      : found === 4
+        ? 'ALL NODES VERIFIED'
+        : `${4 - found} NODE${4 - found === 1 ? '' : 'S'} MISSING`;
+    E.metricCredits.textContent = credits === null ? '—' : cash(credits);
+    E.metricCreditsDelta.innerHTML = deltaMarkup(delta(credits, previousCredits));
+    E.metricStorage.textContent = storage === null ? '—' : fmt(storage);
+    E.metricStorageDelta.innerHTML = deltaMarkup(delta(storage, previousStorage));
+    E.metricAlerts.textContent = String(alerts);
+    E.metricAlertsSub.textContent = alerts ? 'ATTENTION REQUIRED' : 'NO ACTIVE ALERTS';
+
+    const tone = found < 4 ? 'danger' : alerts ? 'warn' : 'good';
+    E.networkState.dataset.tone = tone;
+    E.networkState.querySelector('strong').textContent = found < 4
+      ? 'NETWORK DEGRADED'
+      : alerts
+        ? 'NODES ONLINE // ALERTS ACTIVE'
+        : 'ALL NODES NOMINAL';
+    E.networkState.querySelector('small').textContent = mode === 'cache'
+      ? `CACHED STATE // ${ageText()}`
+      : 'NETWORK STATE';
+  }
+
+  function miniMaintenance(base) {
+    if (!base) {
+      return '<div class="maintenance-mini"><span data-tone="muted">NO TELEMETRY</span></div>';
+    }
+    return `<div class="maintenance-mini">${baseMaintenance(base).map(({ definition, item, state }) => `<span data-tone="${state}" title="${esc(definition.label)}">${definition.code}<b>${fmt(qty(item))}</b></span>`).join('')}</div>`;
+  }
+
+  function renderOverview() {
+    E.overviewSync.textContent = syncText();
+    E.overviewSync.dataset.tone = freshnessTone();
+    renderNetworkMetrics();
+    E.grid.innerHTML = POBS.map((pob, index) => {
+      const base = bases.get(pob.key);
+      const alerts = baseAlerts(pob, base);
+      if (!base) {
+        const awaiting = !last && mode === 'none';
+        return `<article class="base-card" data-base-key="${pob.key}" data-state="${awaiting ? 'awaiting' : 'missing'}" tabindex="0" role="button" aria-label="Open ${esc(pob.label)}"><span class="node-id">NODE 0${index + 1}</span><div class="base-card-head"><div><h3>${esc(pob.label)}</h3><p class="where">${awaiting ? 'Awaiting verified telemetry' : 'POB not found in the current feed'}</p></div><span class="health-pill" data-tone="${awaiting ? 'muted' : 'danger'}">${awaiting ? 'WAITING' : 'OFFLINE'}</span></div>${miniMaintenance(null)}<div class="base-card-footer"><span>NO VERIFIED TELEMETRY</span><b data-tone="${awaiting ? 'muted' : 'danger'}">${awaiting ? 'PENDING' : `${alerts.length} ALERT`}</b></div></article>`;
+      }
+      return `<article class="base-card" data-base-key="${pob.key}" tabindex="0" role="button" aria-label="Open ${esc(pob.label)}"><span class="node-id">NODE 0${index + 1}</span><div class="base-card-head"><div><h3>${esc(pob.label)}</h3><p class="where">${esc(loc(base))}</p></div><span class="health-pill" data-tone="${hpTone(base)}">${hpText(base)}</span></div><div class="base-card-stats"><div><small>CREDITS</small><strong>${cash(creditsRaw(base))}</strong></div><div><small>FREE STORAGE</small><strong>${fmt(storageRaw(base))}</strong></div></div>${miniMaintenance(base)}<div class="base-card-footer"><span>FACILITY CONDITIONS</span><b data-tone="${alerts.length ? 'warn' : 'good'}">${alerts.length ? `${alerts.length} ALERT${alerts.length === 1 ? '' : 'S'}` : 'NOMINAL'}</b></div></article>`;
+    }).join('');
+    renderMatrix();
+  }
+
+  function matrixRows() {
+    const rows = MAINT.map(item => ({
+      key: item.key,
+      label: item.label,
+      maintenance: item
+    }));
+    watchlist().forEach(watched => {
+      if (!rows.some(row => row.key === watched.key)) {
+        rows.push({ key: watched.key, label: watched.label, maintenance: null });
+      }
+    });
+    return rows;
+  }
+
+  function renderMatrix() {
+    const rows = matrixRows();
+    E.matrix.innerHTML = `<div class="matrix-table" role="table" aria-label="Cross-POB reserve matrix"><div class="matrix-row matrix-head" role="row"><span role="columnheader">COMMODITY</span>${POBS.map(pob => `<span role="columnheader">${esc(pob.short)}</span>`).join('')}</div>${rows.map(row => `<div class="matrix-row" role="row"><strong role="rowheader">${esc(row.label)}${row.maintenance ? '<small>MAINT</small>' : '<small>WATCH</small>'}</strong>${POBS.map(pob => {
+      const base = bases.get(pob.key);
+      const item = base ? itemByName(base, row.label) : null;
+      const state = row.maintenance ? maintenanceState(item, row.maintenance) : stockState(item);
+      const detail = !base
+        ? 'NO FEED'
+        : !item
+          ? 'UNLISTED'
+          : row.maintenance
+            ? maintenanceStatus(item, row.maintenance)
+            : boundary(item).valid
+              ? 'STOCK'
+              : 'NO LIMITS';
+      return `<button role="cell" type="button" data-matrix-base="${pob.key}" data-matrix-item="${esc(row.label)}" data-tone="${state}" aria-label="Open ${esc(row.label)} at ${esc(pob.label)}"><b>${fmt(qty(item))}</b><small>${detail}</small></button>`;
+    }).join('')}</div>`).join('')}</div>`;
+  }
+
+  function renderMaintenance(base) {
+    const rows = baseMaintenance(base);
+    const state = worst(rows.map(row => row.state));
+    E.facilityState.dataset.tone = state;
+    E.facilityState.textContent = state === 'danger'
+      ? 'ACTION REQUIRED'
+      : state === 'warn'
+        ? 'RESERVE WATCH'
+        : state === 'muted'
+          ? 'DATA INCOMPLETE'
+          : 'FACILITY NOMINAL';
+    E.maintenance.innerHTML = rows.map(({ definition, item, state: itemState }) => {
+      const quantity = qty(item);
+      return `<article class="maintenance-card" data-tone="${itemState}"><div class="maintenance-title"><div><small>${definition.code} // DAILY FACILITY SUPPLY</small><strong>${esc(definition.label)}</strong></div><span>${maintenanceStatus(item, definition)}</span></div><div class="maintenance-value"><b>${fmt(quantity)}</b><em>${quantity === null ? 'not reported' : 'units'}</em></div>${stockMarkup(item, true)}</article>`;
+    }).join('');
+  }
+
+  function renderPriority(definition, base) {
+    const list = baseAlerts(definition, base);
+    E.priorityCount.textContent = `${list.length} ALERT${list.length === 1 ? '' : 'S'}`;
+    E.priorityCount.dataset.tone = list.some(item => item.tone === 'danger')
+      ? 'danger'
+      : list.length
+        ? 'warn'
+        : 'good';
+    E.priority.innerHTML = list.length
+      ? list.map((alert, index) => `<article data-tone="${alert.tone}"><span>0${index + 1}</span><div><strong>${esc(alert.title)}</strong><p>${esc(alert.detail)}</p></div></article>`).join('')
+      : '<div class="priority-empty"><i></i><div><strong>NO ACTIVE ALERTS</strong><span>Facility health and monitored reserves are nominal.</span></div></div>';
+  }
+
+  function renderWatch(base) {
+    const list = watchlist();
+    E.watchCount.textContent = `${list.length} WATCHED`;
+    if (!list.length) {
+      E.watchGrid.innerHTML = '<div class="watch-empty">WATCHLIST EMPTY <small>Star cargo in the manifest to pin it here.</small></div>';
+      return;
+    }
+    E.watchGrid.innerHTML = list.map(watched => {
+      const item = base ? itemByName(base, watched.label) : null;
+      const quantity = qty(item);
+      return `<article class="watch-card" data-tone="${stockState(item)}"><button class="watch-remove" type="button" data-unwatch="${esc(watched.label)}" aria-label="Remove ${esc(watched.label)} from watchlist">×</button><small>WATCHED CARGO</small><strong>${esc(watched.label)}</strong><b>${fmt(quantity)}</b><span class="watch-meta">${quantity === null ? 'NOT REPORTED' : 'UNITS'}</span>${stockMarkup(item, true)}</article>`;
+    }).join('');
+  }
+
+  function renderItems(base) {
+    if (!base) {
+      E.body.innerHTML = '';
+      E.empty.textContent = 'INVENTORY UNAVAILABLE // NO VERIFIED POB TELEMETRY';
+      E.empty.hidden = false;
+      return;
+    }
+    const query = norm(E.search.value);
+    const watched = new Set(watchlist().map(entry => entry.key));
+    let list = items(base);
+    list = list.filter(item => {
+      const key = itemKey(item);
+      if (query && !key.includes(query)) return false;
+      if (inventoryFilter === 'watch') return watched.has(key);
+      if (inventoryFilter === 'buy') return (buy(item) ?? 0) > 0;
+      if (inventoryFilter === 'sell') return (sell(item) ?? 0) > 0;
+      return true;
+    }).sort((left, right) => itemName(left).localeCompare(itemName(right), 'en'));
+
+    E.body.innerHTML = list.map(item => {
+      const name = itemName(item);
+      const watchedItem = watched.has(itemKey(item));
+      return `<tr><td data-label="WATCH"><button class="watch-toggle${watchedItem ? ' active' : ''}" type="button" data-watch="${esc(name)}" aria-label="${watchedItem ? 'Remove' : 'Add'} ${esc(name)} ${watchedItem ? 'from' : 'to'} watchlist">★</button></td><td class="item-name" data-label="ITEM">${esc(name)}</td><td data-label="QUANTITY">${fmt(qty(item))}</td><td class="muted" data-label="BASE BUYS">${esc(price(buy(item)))}</td><td class="muted" data-label="BASE SELLS">${esc(price(sell(item)))}</td><td class="stock-cell" data-label="STOCK LEVEL">${stockMarkup(item)}</td></tr>`;
+    }).join('');
+    E.empty.textContent = 'NO MATCHING COMMODITY FOUND';
+    E.empty.hidden = list.length > 0;
+  }
+
+  function renderDetail(key) {
+    const definition = POBS.find(pob => pob.key === key);
+    if (!definition) {
+      view = 'overview';
+      saveJson(KEYS.view, view);
+      render();
+      return;
+    }
+    const base = bases.get(key);
+    const previousBase = previousBases.get(key);
+    E.kicker.textContent = `POB NODE // ${mode === 'cache' ? 'CACHED' : 'LIVE'}`;
+    E.name.textContent = definition.label;
+    E.location.textContent = loc(base);
+    E.sync.textContent = last ? formatClock(last) : '—';
+    E.syncMode.textContent = mode === 'cache'
+      ? `CACHE // ${ageText()}`
+      : 'LIVE DARKSTAT SNAPSHOT';
+
+    if (!base) {
+      E.badge.dataset.tone = 'danger';
+      E.badge.textContent = 'OFFLINE';
+      E.health.textContent = '—';
+      E.meter.style.width = '0';
+      E.credits.textContent = '—';
+      E.storage.textContent = '—';
+      [E.healthDelta, E.creditsDelta, E.storageDelta].forEach(element => {
+        element.textContent = 'NO DATA';
+      });
+      E.detailDelta.textContent = 'NODE NOT FOUND IN CURRENT FEED';
+      renderMaintenance(null);
+      renderPriority(definition, null);
+      renderWatch(null);
+      renderItems(null);
+      return;
+    }
+
+    const health = hp(base);
+    const healthState = hpTone(base);
+    const healthChange = delta(health, hp(previousBase));
+    const creditChange = delta(creditsRaw(base), creditsRaw(previousBase));
+    const storageChange = delta(storageRaw(base), storageRaw(previousBase));
+    E.badge.dataset.tone = healthState;
+    E.badge.textContent = hpText(base);
+    E.health.textContent = hpText(base);
+    E.meter.style.width = `${health ?? 0}%`;
+    E.meter.dataset.tone = healthState;
+    E.credits.textContent = cash(creditsRaw(base));
+    E.storage.textContent = fmt(storageRaw(base));
+    setDelta(E.healthDelta, healthChange, '%');
+    setDelta(E.creditsDelta, creditChange);
+    setDelta(E.storageDelta, storageChange);
+    E.detailDelta.textContent = previousBase ? 'PREVIOUS SNAPSHOT AVAILABLE' : 'NO PREVIOUS SNAPSHOT FOR COMPARISON';
+    renderMaintenance(base);
+    renderPriority(definition, base);
+    renderWatch(base);
+    renderItems(base);
+  }
+
+  function render() {
+    renderOverview();
+    const detail = view !== 'overview';
+    E.overview.hidden = detail;
+    E.detail.hidden = !detail;
+    E.tabs.querySelectorAll('.tab').forEach(button => {
+      const active = button.dataset.view === view;
+      button.classList.toggle('active', active);
+      if (active) button.setAttribute('aria-current', 'page');
+      else button.removeAttribute('aria-current');
+    });
+    if (detail) renderDetail(view);
+  }
+
+  function show(next, itemSearch = '') {
+    view = VALID_VIEWS.has(next) ? next : 'overview';
+    saveJson(KEYS.view, view);
+    E.search.value = itemSearch;
+    inventoryFilter = 'all';
+    E.filters.querySelectorAll('button').forEach(button => {
+      button.classList.toggle('active', button.dataset.filter === 'all');
+    });
+    render();
+    emitState('view');
+    window.scrollTo({
+      top: 0,
+      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+    });
+  }
+
+  function hydrateLatest({ renderNow = true } = {}) {
+    const live = loadJson(KEYS.live);
+    const previous = loadJson(KEYS.previous);
+    if (!Array.isArray(live?.data)) return false;
+    const savedAt = Date.parse(live.savedAt || '');
+    data = live.data;
+    previousData = Array.isArray(previous?.data) ? previous.data : [];
+    last = new Date(Number.isFinite(savedAt) ? savedAt : Date.now());
+    mode = 'cache';
+    rebuild();
+    status('cache', ageMs() >= STALE_DANGER_MS ? 'STALE CACHE' : 'CACHED DATA');
+    if (renderNow) render();
+    return true;
+  }
+
+  function persistLive(nextData) {
+    const current = loadJson(KEYS.live);
+    let previousSaved = true;
+    if (Array.isArray(current?.data)) previousSaved = saveJson(KEYS.previous, current);
+    const liveSaved = saveJson(KEYS.live, {
+      savedAt: new Date().toISOString(),
+      data: nextData
+    });
+    const fallbackPrevious = loadJson(KEYS.previous);
+    previousData = Array.isArray(current?.data)
+      ? current.data
+      : Array.isArray(fallbackPrevious?.data)
+        ? fallbackPrevious.data
+        : [];
+    return previousSaved && liveSaved;
+  }
+
+  async function requestTelemetry() {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      return await fetch(API, {
+        method: 'POST',
+        headers: { Accept: 'application/json' },
+        signal: controller.signal
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  async function load() {
+    if (loadInFlight) return loadInFlight;
+    if (refreshTimer) clearTimeout(refreshTimer);
+    E.refresh.disabled = true;
+    E.error.hidden = true;
+    status('loading', 'SYNCING');
+
+    loadInFlight = (async () => {
+      try {
+        const response = await requestTelemetry();
+        if (!response.ok) throw new Error(`Darkstat HTTP ${response.status}`);
+        const next = await response.json();
+        if (!Array.isArray(next)) throw new Error('Invalid POB response');
+
+        const stored = persistLive(next);
+        data = next;
+        last = new Date();
+        mode = 'live';
+        lastError = '';
+        rebuild();
+        const found = POBS.filter(pob => bases.get(pob.key)).length;
+        status('live', `${found}/4 NODES LIVE`);
+        render();
+        if (!stored) {
+          E.error.hidden = false;
+          E.errorText.textContent = 'Live telemetry loaded, but this device could not save the offline snapshot.';
+        }
+      } catch (error) {
+        lastError = error?.name === 'AbortError'
+          ? 'Darkstat timed out after 18 seconds.'
+          : String(error?.message || 'Darkstat unavailable.');
+
+        if (data.length && last) {
+          mode = 'cache';
+          status('cache', ageMs() >= STALE_DANGER_MS ? 'STALE CACHE' : 'CACHE ACTIVE');
+          E.error.hidden = false;
+          E.errorText.textContent = `Live uplink failed. The last verified snapshot remains active // ${ageText()}.`;
+          render();
+        } else if (hydrateLatest({ renderNow: false })) {
+          E.error.hidden = false;
+          E.errorText.textContent = `Live uplink failed. The last verified snapshot remains active // ${ageText()}.`;
+          render();
+        } else {
+          mode = 'none';
+          status('error', 'UPLINK FAILED');
+          E.error.hidden = false;
+          E.errorText.textContent = lastError;
+          render();
+        }
+      }
+    })();
+
+    emitState('loading');
+    try {
+      await loadInFlight;
+    } finally {
+      loadInFlight = null;
+      E.refresh.disabled = false;
+      nextRefreshAt = Date.now() + REFRESH_MS;
+      refreshTimer = setTimeout(load, REFRESH_MS);
+      emitState('loaded');
+    }
+  }
+
+  function storageCheck() {
+    const key = `dtr:probe:${Date.now()}`;
+    try {
+      localStorage.setItem(key, 'ok');
+      const ready = localStorage.getItem(key) === 'ok';
+      localStorage.removeItem(key);
+      return ready;
+    } catch {
+      return false;
+    }
+  }
+
+  function updateClock() {
+    E.clock.textContent = formatClock(new Date());
+  }
+
+  function updateStickyOffset() {
+    requestAnimationFrame(() => {
+      const offset = E.offline.hidden ? 0 : E.offline.getBoundingClientRect().height;
+      document.documentElement.style.setProperty('--sticky-offset', `${Math.round(offset)}px`);
+    });
+  }
+
+  function connectionState() {
+    E.offline.hidden = navigator.onLine;
+    updateStickyOffset();
+    if (!navigator.onLine && mode === 'live') {
+      mode = 'cache';
+      status('cache', 'OFFLINE // CACHE');
+      render();
+    }
+    emitState('connection');
+  }
+
+  function focusable(panel) {
+    return [...panel.querySelectorAll('button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])')]
+      .filter(element => !element.hidden && element.getClientRects().length);
+  }
+
+  function trapSystemFocus(event) {
+    if (event.key !== 'Tab' || E.systemPanel.hidden) return;
+    const controls = focusable(E.systemPanel);
+    if (!controls.length) return;
+    const first = controls[0];
+    const final = controls[controls.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      final.focus();
+    } else if (!event.shiftKey && document.activeElement === final) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  function openSystem() {
+    systemReturnFocus = document.activeElement;
+    E.systemPanel.hidden = false;
+    document.body.classList.add('modal-open');
+    window.dispatchEvent(new CustomEvent('dtr:system-open'));
+    E.systemClose.focus();
+  }
+
+  function closeSystem() {
+    E.systemPanel.hidden = true;
+    document.body.classList.remove('modal-open');
+    (systemReturnFocus instanceof HTMLElement ? systemReturnFocus : E.systemButton).focus();
+  }
+
+  E.tabs.addEventListener('click', event => {
+    const button = event.target.closest('.tab');
+    if (button) show(button.dataset.view);
+  });
+  E.grid.addEventListener('click', event => {
+    const card = event.target.closest('[data-base-key]');
+    if (card) show(card.dataset.baseKey);
+  });
+  E.grid.addEventListener('keydown', event => {
+    if (!['Enter', ' '].includes(event.key)) return;
+    const card = event.target.closest('[data-base-key]');
+    if (card) {
+      event.preventDefault();
+      show(card.dataset.baseKey);
+    }
+  });
+  E.matrix.addEventListener('click', event => {
+    const button = event.target.closest('[data-matrix-base]');
+    if (button) show(button.dataset.matrixBase, button.dataset.matrixItem);
+  });
+  E.search.addEventListener('input', () => {
+    if (view !== 'overview') renderItems(bases.get(view));
+  });
+  E.filters.addEventListener('click', event => {
+    const button = event.target.closest('[data-filter]');
+    if (!button) return;
+    inventoryFilter = button.dataset.filter;
+    E.filters.querySelectorAll('button').forEach(candidate => {
+      candidate.classList.toggle('active', candidate === button);
+    });
+    renderItems(bases.get(view));
+  });
+  E.body.addEventListener('click', event => {
+    const button = event.target.closest('[data-watch]');
+    if (button) toggleWatch(button.dataset.watch);
+  });
+  E.watchGrid.addEventListener('click', event => {
+    const button = event.target.closest('[data-unwatch]');
+    if (button) toggleWatch(button.dataset.unwatch);
+  });
+  E.refresh.addEventListener('click', load);
+  E.systemButton.addEventListener('click', openSystem);
+  E.systemClose.addEventListener('click', closeSystem);
+  E.systemRefresh.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('dtr:system-refresh'));
+  });
+  E.systemPanel.addEventListener('click', event => {
+    if (event.target === E.systemPanel) closeSystem();
+  });
+  E.systemPanel.addEventListener('keydown', trapSystemFocus);
+
+  window.addEventListener('online', () => {
+    connectionState();
+    load();
+  });
+  window.addEventListener('offline', connectionState);
+  window.addEventListener('resize', updateStickyOffset);
+  window.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !E.systemPanel.hidden) closeSystem();
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && nextRefreshAt && Date.now() >= nextRefreshAt) load();
+  });
+
+  window.DTRApp = Object.freeze({
+    API,
+    LOCALE,
+    POBS,
+    MAINT,
+    KEYS,
+    REFRESH_MS,
+    STALE_WARN_MS,
+    STALE_DANGER_MS,
+    refresh: load,
+    show,
+    storageCheck,
+    ageText,
+    getState() {
+      return {
+        data,
+        previousData,
+        bases: new Map(bases),
+        previousBases: new Map(previousBases),
+        view,
+        last,
+        mode,
+        loading: Boolean(loadInFlight),
+        nextRefreshAt,
+        lastError,
+        storageFaults: storageFaults.slice(),
+        recoveries: recoveryIndex()
+      };
+    }
+  });
+
+  setInterval(updateClock, 1000);
+  updateClock();
+  connectionState();
+  hydrateLatest({ renderNow: false });
+  render();
+  emitState('boot');
+  load();
 })();

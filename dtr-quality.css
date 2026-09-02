@@ -1,4 +1,298 @@
 /* DTR compact quality layer */
-.dtr-quickbar{display:flex;align-items:center;gap:10px;min-height:46px;margin:0;padding:6px clamp(10px,2vw,24px);border-bottom:1px solid rgba(157,48,57,.2);background:linear-gradient(180deg,rgba(19,7,9,.96),rgba(5,5,6,.98));box-shadow:0 10px 28px rgba(0,0,0,.2);position:relative;z-index:30}.dtr-attention-toggle{display:grid;grid-template-columns:auto auto;grid-template-areas:"label count" "sub count";align-items:center;gap:1px 10px;min-width:150px;min-height:34px;padding:5px 10px;border:1px solid rgba(189,70,82,.26);background:rgba(157,48,57,.055);color:var(--text);font-family:"Oxanium",sans-serif;text-align:left;cursor:pointer}.dtr-attention-toggle span{grid-area:label;color:var(--rose);font-size:10px;font-weight:700;letter-spacing:.08em}.dtr-attention-toggle small{grid-area:sub;color:var(--muted);font-size:6px;letter-spacing:.08em}.dtr-attention-toggle b{grid-area:count;display:grid;place-items:center;min-width:26px;height:26px;border:1px solid rgba(189,70,82,.28);color:var(--gold);font-size:10px}.dtr-attention-toggle[aria-pressed=true]{border-color:rgba(189,70,82,.7);background:linear-gradient(180deg,rgba(157,48,57,.22),rgba(74,20,26,.09));box-shadow:inset 0 -2px 0 var(--red-bright)}.dtr-attention-toggle[aria-pressed=true] b{background:rgba(189,70,82,.15);color:#fff}.dtr-quickbar-state{display:grid;gap:1px;min-width:0}.dtr-quickbar-state small{color:var(--muted);font:6px "Oxanium",sans-serif;letter-spacing:.1em}.dtr-quickbar-state strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);font:8px "Oxanium",sans-serif;letter-spacing:.055em}.dtr-build-chip{margin-left:auto;color:var(--muted);font:7px "Oxanium",sans-serif;letter-spacing:.07em;white-space:nowrap}.dtr-attention-hidden{display:none!important}.dtr-footer-build{color:var(--muted)!important;font:6px "Oxanium",sans-serif!important;letter-spacing:.07em!important;white-space:nowrap}.dtr-diagnostic-card{position:relative;display:grid;gap:5px;min-height:92px;padding:12px;border:1px solid rgba(157,48,57,.18);background:linear-gradient(150deg,rgba(157,48,57,.055),rgba(255,255,255,.012));overflow:hidden}.dtr-diagnostic-card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:#61595d}.dtr-diagnostic-card[data-tone=good]:before{background:var(--good)}.dtr-diagnostic-card[data-tone=warn]:before{background:var(--warn)}.dtr-diagnostic-card[data-tone=danger]:before{background:var(--bad)}.dtr-diagnostic-card small{color:var(--muted);font:6px "Oxanium",sans-serif;letter-spacing:.09em}.dtr-diagnostic-card strong{color:var(--text);font:12px "Oxanium",sans-serif;letter-spacing:.035em}.dtr-diagnostic-card[data-tone=good] strong{color:var(--good)}.dtr-diagnostic-card[data-tone=warn] strong{color:var(--warn)}.dtr-diagnostic-card[data-tone=danger] strong{color:var(--bad)}.dtr-diagnostic-card span{color:var(--muted);font-size:9px;line-height:1.45}.system-actions{flex-wrap:wrap}.system-actions #dtrDiagnosticsCopy{border-color:rgba(200,174,130,.28);color:var(--gold)}.dtr-mobile-nav{display:none}.system-overlay{z-index:440!important}.install-sheet{z-index:460!important}
-@media(max-width:760px){body{padding-bottom:calc(70px + env(safe-area-inset-bottom,0px))}.tabs{display:none!important}.dtr-quickbar{position:sticky;top:0;z-index:85;padding:5px 7px;gap:7px;background:rgba(5,5,6,.97);backdrop-filter:blur(14px)}.dtr-attention-toggle{min-width:128px;min-height:40px;padding:5px 8px}.dtr-attention-toggle span{font-size:9px}.dtr-quickbar-state strong{font-size:6.5px}.dtr-build-chip{display:none}.dtr-mobile-nav{position:fixed;z-index:220;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;padding:5px 5px calc(5px + env(safe-area-inset-bottom,0px));border-top:1px solid rgba(189,70,82,.32);background:rgba(5,5,6,.98);box-shadow:0 -14px 32px rgba(0,0,0,.5);backdrop-filter:blur(16px);transition:opacity .16s ease,transform .16s ease}.modal-open .dtr-mobile-nav{opacity:0;transform:translateY(112%);pointer-events:none}.dtr-mobile-nav button{display:grid;place-items:center;gap:2px;min-width:0;min-height:52px;padding:5px 2px;border:1px solid rgba(255,255,255,.045);background:rgba(255,255,255,.012);color:var(--muted);font-family:"Oxanium",sans-serif;cursor:pointer}.dtr-mobile-nav button small{font-size:6px;letter-spacing:.08em;color:rgba(221,163,174,.54)}.dtr-mobile-nav button span{max-width:100%;overflow:hidden;text-overflow:ellipsis;font-size:7px;font-weight:700;letter-spacing:.025em}.dtr-mobile-nav button.active{border-color:rgba(189,70,82,.55);background:linear-gradient(180deg,rgba(157,48,57,.2),rgba(74,20,26,.08));color:var(--rose);box-shadow:inset 0 -2px 0 var(--red-bright)}.dtr-mobile-nav button.active small{color:var(--gold)}.dtr-diagnostic-card{min-height:82px;padding:10px}.system-actions #dtrDiagnosticsCopy{width:100%}.install-sheet{bottom:max(14px,env(safe-area-inset-bottom,0px))!important;max-height:calc(100dvh - 28px);overflow:auto}.system-overlay{padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}}
-@media(max-width:390px){.dtr-quickbar-state small{display:none}.dtr-quickbar-state strong{white-space:normal;line-height:1.25}.dtr-attention-toggle{min-width:120px}.dtr-mobile-nav button span{font-size:6.3px}.dtr-mobile-nav button{min-height:50px}}
+.dtr-quickbar {
+  position: relative;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  margin: 0;
+  padding: 7px clamp(10px, 2vw, 24px);
+  border-bottom: 1px solid rgba(157, 48, 57, 0.2);
+  background: linear-gradient(180deg, rgba(19, 7, 9, 0.96), rgba(5, 5, 6, 0.98));
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
+}
+
+.dtr-attention-toggle {
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-areas: "label count" "sub count";
+  align-items: center;
+  gap: 2px 10px;
+  min-width: 160px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid rgba(189, 70, 82, 0.26);
+  background: rgba(157, 48, 57, 0.055);
+  color: var(--text);
+  font-family: "Oxanium", sans-serif;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dtr-attention-toggle span {
+  grid-area: label;
+  color: var(--rose);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.dtr-attention-toggle small {
+  grid-area: sub;
+  color: var(--muted);
+  font-size: 0.67rem;
+  letter-spacing: 0.08em;
+}
+
+.dtr-attention-toggle b {
+  grid-area: count;
+  display: grid;
+  place-items: center;
+  min-width: 30px;
+  height: 30px;
+  border: 1px solid rgba(189, 70, 82, 0.28);
+  color: var(--gold);
+  font-size: 0.75rem;
+}
+
+.dtr-attention-toggle[aria-pressed="true"] {
+  border-color: rgba(189, 70, 82, 0.7);
+  background: linear-gradient(180deg, rgba(157, 48, 57, 0.22), rgba(74, 20, 26, 0.09));
+  box-shadow: inset 0 -2px 0 var(--red-bright);
+}
+
+.dtr-attention-toggle[aria-pressed="true"] b {
+  background: rgba(189, 70, 82, 0.15);
+  color: #fff;
+}
+
+.dtr-quickbar-state {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dtr-quickbar-state small {
+  color: var(--muted);
+  font: 0.67rem "Oxanium", sans-serif;
+  letter-spacing: 0.1em;
+}
+
+.dtr-quickbar-state strong {
+  overflow: hidden;
+  color: var(--text);
+  font: 0.75rem "Oxanium", sans-serif;
+  letter-spacing: 0.055em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dtr-build-chip {
+  margin-left: auto;
+  color: var(--muted);
+  font: 0.68rem "Oxanium", sans-serif;
+  letter-spacing: 0.07em;
+  white-space: nowrap;
+}
+
+.dtr-attention-hidden {
+  display: none !important;
+}
+
+.dtr-footer-build {
+  color: var(--muted) !important;
+  font: 0.68rem "Oxanium", sans-serif !important;
+  letter-spacing: 0.07em !important;
+  white-space: nowrap;
+}
+
+.dtr-diagnostic-card {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  min-height: 104px;
+  padding: 13px;
+  overflow: hidden;
+  border: 1px solid rgba(157, 48, 57, 0.18);
+  background: linear-gradient(150deg, rgba(157, 48, 57, 0.055), rgba(255, 255, 255, 0.012));
+}
+
+.dtr-diagnostic-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: #61595d;
+}
+
+.dtr-diagnostic-card[data-tone="good"]::before { background: var(--good); }
+.dtr-diagnostic-card[data-tone="warn"]::before { background: var(--warn); }
+.dtr-diagnostic-card[data-tone="danger"]::before { background: var(--bad); }
+
+.dtr-diagnostic-card small {
+  color: var(--muted);
+  font: 0.68rem "Oxanium", sans-serif;
+  letter-spacing: 0.09em;
+}
+
+.dtr-diagnostic-card strong {
+  color: var(--text);
+  font: 0.85rem "Oxanium", sans-serif;
+  letter-spacing: 0.035em;
+}
+
+.dtr-diagnostic-card[data-tone="good"] strong { color: var(--good); }
+.dtr-diagnostic-card[data-tone="warn"] strong { color: var(--warn); }
+.dtr-diagnostic-card[data-tone="danger"] strong { color: var(--bad); }
+
+.dtr-diagnostic-card span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.system-actions { flex-wrap: wrap; }
+.system-actions #dtrDiagnosticsCopy { border-color: rgba(200, 174, 130, 0.28); color: var(--gold); }
+.dtr-mobile-nav { display: none; }
+.system-overlay { z-index: 440 !important; }
+.install-sheet { z-index: 460 !important; }
+
+@media (max-width: 760px) {
+  body {
+    padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .tabs {
+    display: none !important;
+  }
+
+  .dtr-quickbar {
+    position: sticky;
+    top: var(--sticky-offset, 0px);
+    z-index: 85;
+    gap: 8px;
+    padding: 6px 8px;
+    background: rgba(5, 5, 6, 0.97);
+    backdrop-filter: blur(14px);
+  }
+
+  .dtr-attention-toggle {
+    min-width: 146px;
+    min-height: 46px;
+    padding: 6px 9px;
+  }
+
+  .dtr-build-chip {
+    display: none;
+  }
+
+  .dtr-mobile-nav {
+    position: fixed;
+    z-index: 220;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    padding: 7px 6px calc(7px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid rgba(189, 70, 82, 0.4);
+    background: rgba(5, 5, 6, 0.985);
+    box-shadow: 0 -14px 32px rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(16px);
+    transition: opacity 0.16s ease, transform 0.16s ease;
+  }
+
+  .modal-open .dtr-mobile-nav {
+    opacity: 0;
+    transform: translateY(112%);
+    pointer-events: none;
+  }
+
+  .dtr-mobile-nav button {
+    display: grid;
+    place-items: center;
+    gap: 4px;
+    min-width: 0;
+    min-height: 64px;
+    padding: 7px 3px;
+    border: 1px solid rgba(255, 255, 255, 0.075);
+    background: rgba(255, 255, 255, 0.02);
+    color: #aea3aa;
+    font-family: "Oxanium", sans-serif;
+    cursor: pointer;
+  }
+
+  .dtr-mobile-nav button small {
+    color: rgba(221, 163, 174, 0.78);
+    font-size: 0.67rem;
+    letter-spacing: 0.08em;
+  }
+
+  .dtr-mobile-nav button span {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: clamp(0.69rem, 2.7vw, 0.82rem);
+    font-weight: 700;
+    letter-spacing: 0.015em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dtr-mobile-nav button.active {
+    border-color: rgba(189, 70, 82, 0.72);
+    background: linear-gradient(180deg, rgba(157, 48, 57, 0.28), rgba(74, 20, 26, 0.1));
+    color: #f2bbc5;
+    box-shadow: inset 0 -3px 0 var(--red-bright);
+  }
+
+  .dtr-mobile-nav button.active small {
+    color: #e5c690;
+  }
+
+  .dtr-diagnostic-card {
+    min-height: 96px;
+    padding: 12px;
+  }
+
+  .system-actions #dtrDiagnosticsCopy {
+    width: 100%;
+  }
+
+  .install-sheet {
+    bottom: max(14px, env(safe-area-inset-bottom, 0px)) !important;
+    max-height: calc(100dvh - 28px);
+    overflow: auto;
+  }
+
+  .system-overlay {
+    padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (max-width: 390px) {
+  .dtr-quickbar-state small {
+    display: none;
+  }
+
+  .dtr-quickbar-state strong {
+    font-size: 0.7rem;
+    line-height: 1.25;
+    white-space: normal;
+  }
+
+  .dtr-attention-toggle {
+    min-width: 138px;
+  }
+
+  .dtr-mobile-nav button {
+    min-height: 60px;
+  }
+
+  .dtr-mobile-nav button span {
+    font-size: clamp(0.65rem, 2.65vw, 0.74rem);
+  }
+}

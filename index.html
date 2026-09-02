@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -19,10 +19,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Oxanium:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./enhancements.css">
+  <link rel="stylesheet" href="./dtr-quality.css">
+  <link rel="stylesheet" href="./dtr-uplink.css">
+  <link rel="stylesheet" href="./dtr-responsive.css">
 </head>
 <body>
   <div class="ambient-grid" aria-hidden="true"></div>
-  <div class="offline-banner" id="offlineBanner" hidden><strong>OFFLINE MODE</strong><span>LAST VERIFIED CACHE // LIVE TELEMETRY PAUSED</span></div>
+  <div class="offline-banner" id="offlineBanner" role="status" aria-live="polite" hidden><strong>OFFLINE MODE</strong><span>LAST VERIFIED CACHE // LIVE TELEMETRY PAUSED</span></div>
 
   <header class="topbar">
     <div class="brand-shell">
@@ -31,7 +34,7 @@
         <p class="eyebrow">CORSAIR SECURE NETWORK // DTR</p>
         <h1><span class="brand-main">DTR</span><span class="brand-slash">//</span><span class="brand-sub">POB NETWORK</span></h1>
         <div class="brand-meta">
-          <span id="headerFreshness">AWAITING TELEMETRY</span><i></i>
+          <span id="headerFreshness" aria-live="polite">AWAITING TELEMETRY</span><i></i>
           <span id="headerClock">--:--:--</span>
         </div>
       </div>
@@ -41,7 +44,7 @@
       <div class="uplink" id="uplink">
         <span class="status-dot" aria-hidden="true"></span>
         <div class="uplink-copy"><small>DARKSTAT UPLINK</small><strong id="statusText">CONNECTING</strong></div>
-        <button id="refreshButton" type="button">REFRESH</button>
+        <button id="refreshButton" type="button" aria-label="Refresh Darkstat telemetry">REFRESH</button>
       </div>
       <button class="system-button" id="systemButton" type="button" aria-haspopup="dialog" aria-controls="systemPanel"><span>SYSTEM</span><small>APP STATUS</small></button>
       <button class="install-button" id="installButton" type="button"><span>INSTALL</span><small>PHONE APP</small></button>
@@ -91,7 +94,7 @@
             <h3>Network Matrix</h3>
             <p class="section-subline">Facility maintenance + watched cargo across every node</p>
           </div>
-          <span class="matrix-hint">TAP A CELL TO OPEN</span>
+          <span class="matrix-hint">SWIPE OR SCROLL // TAP A CELL</span>
         </div>
         <div class="matrix-wrap" id="networkMatrix"></div>
       </section>
@@ -152,20 +155,20 @@
               <button data-filter="buy" type="button">BASE BUYS</button>
               <button data-filter="sell" type="button">BASE SELLS</button>
             </div>
-            <label class="search"><span class="sr-only">Inventar durchsuchen</span><input id="inventorySearch" type="search" placeholder="WARE SUCHEN…"></label>
+            <label class="search"><span class="sr-only">Search inventory</span><input id="inventorySearch" type="search" placeholder="SEARCH COMMODITIES…"></label>
           </div>
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>WATCH</th><th>WARE</th><th>MENGE</th><th>BASE KAUFT</th><th>BASE VERKAUFT</th><th>STOCK LEVEL</th></tr></thead>
+            <thead><tr><th>WATCH</th><th>ITEM</th><th>QUANTITY</th><th>BASE BUYS</th><th>BASE SELLS</th><th>STOCK LEVEL</th></tr></thead>
             <tbody id="inventoryBody"></tbody>
           </table>
         </div>
-        <div class="empty-state" id="inventoryEmpty" hidden>Keine passende Ware gefunden.</div>
+        <div class="empty-state" id="inventoryEmpty" hidden>NO MATCHING COMMODITY FOUND.</div>
       </section>
     </section>
 
-    <section id="errorView" class="error-box" hidden><strong>UPLINK NOTICE</strong><span id="errorText">Darkstat konnte nicht erreicht werden.</span></section>
+    <section id="errorView" class="error-box" role="alert" hidden><strong>UPLINK NOTICE</strong><span id="errorText">Darkstat could not be reached.</span></section>
   </main>
 
   <div class="transmission-rail transmission-rail-end" aria-hidden="true"><span>END OF SECURE FEED</span></div>
@@ -180,13 +183,14 @@
     </section>
   </aside>
 
-  <aside class="install-sheet" id="installSheet" role="dialog" aria-modal="true" hidden>
+  <aside class="install-sheet" id="installSheet" role="dialog" aria-modal="true" aria-labelledby="installTitle" hidden>
     <div><small>DTR COMMAND APP</small><strong id="installTitle">INSTALL ON THIS DEVICE</strong><span id="installMessage">Add DTR to your home screen.</span></div>
     <div class="install-actions"><button id="installPrimary" type="button">INSTALL</button><button id="installClose" type="button">LATER</button></div>
   </aside>
 
   <script src="./dtr-pwa.js"></script>
   <script src="./app.js"></script>
-  <script src="./enhancements.js"></script>
+  <script src="./dtr-quality.js"></script>
+  <script src="./dtr-uplink.js"></script>
 </body>
 </html>

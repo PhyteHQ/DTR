@@ -1,49 +1,29 @@
-# DTR POB Network Control
+# DTR POB Network
 
-Schlanke Corsair-Kontrollseite für vier DTR-POBs:
+Mobile-first operational dashboard for the DTR faction's four player-owned bases. It combines Darkstat telemetry, facility maintenance reserves, watched cargo, inventory quotations and offline snapshot support in one installable web app.
 
-- Deterrence Sanctum
-- Ravenna Invicta
-- Forja del Vacio
-- Fort Torrelavega
+## Runtime
 
-Live-Daten: `POST https://darkstat.dd84ai.com/api/pobs`
+- Static HTML, CSS and JavaScript; no build step is required.
+- Live POB data is requested from the Darkstat API.
+- The latest verified response, previous snapshot, selected view and watchlist are stored locally on the device.
+- A service worker caches the application shell. Telemetry itself remains network-only.
 
-## Aktuelle Grundstruktur
+## Behaviour
 
-- Network Overview für alle vier Nodes
-- Health, Credits, freier Storage und Standortdaten
-- Facility Maintenance pro POB: Basic Alloy, Food Rations, Consumer Goods
-- Maintenance-Status mit Reserve-Warnungen und API-MIN/MAX-Balken
-- Priority Feed für Health- und Maintenance-Probleme
-- Watchlist für frei wählbare Commodities
-- Cross-POB Network Matrix für Maintenance + Watchlist
-- Cargo Manifest mit Suche sowie Buy/Sell/Watch-Filtern
-- Last-Good-Cache und klarer LIVE/CACHE/OFFLINE-Status
-- installierbare PWA / Offline-App-Shell
-- sichtbarer `UPDATE NOW`-Flow für neue App-Builds
-- ATTENTION-Modus zum Ausblenden normaler/unkritischer Daten
-- erweiterter System Check für Build, Runtime, Local Storage, Netzwerk, Darkstat, POB-Matches, PWA und Update-Status
-- privacy-sicherer `COPY DIAGNOSTICS`-Report ohne Warenmengen, Preise oder POB-Credits
-- Recovery für beschädigte lokale JSON-Caches
-- persistente Attention-Einstellung und App-Präferenzen
-- mobile Daumen-Navigation für ALL / SANCTUM / INVICTA / FORJA / TORRE
-- sichtbare DTR-Version + Build-ID
+- All visible interface text is English.
+- Missing quantities remain unknown (`—`) and are never treated as zero.
+- Stock bars and alerts use API-provided minimum and maximum limits. When limits are absent, no bar or inferred stock warning is shown.
+- Facility supplies fall back to DTR maintenance thresholds only when the API provides no valid limits.
+- App updates wait for explicit approval through **UPDATE NOW** before reloading.
+- The desktop tab strip and the larger fixed mobile navigation operate on the same view state.
 
-## Facility Maintenance
+## Quality checks
 
-Die drei Grundversorgungen sind bewusst Teil der Core-POB-Ansicht und nicht des späteren Produktionssystems:
+Run the repository's dependency-free audit with:
 
-- Basic Alloy
-- Food Rations
-- Consumer Goods
+```sh
+node tests/static-audit.mjs
+```
 
-Aktuelle Reserve-Ampel: kritisch unter 2.500, niedrig unter 15.000, ansonsten operational. Die sichtbaren Stock-Balken verwenden – wenn von Darkstat geliefert – die echten API-Werte `min_stock` und `max_stock`.
-
-## Noch nicht Teil der Grundstruktur
-
-Produktionslinien, Rezepte und POB-spezifische Produktionslogik werden erst nach gemeinsamer Definition je POB ergänzt. Calculator-, Forum-/BBCode- und RHW-Comms-Funktionen sind für DTR derzeit ausdrücklich nicht vorgesehen.
-
-## GitHub Pages
-
-Live: `https://phytehq.github.io/DTR/`
+The GitHub Actions workflow also checks every JavaScript file for syntax errors and runs the static audit for pull requests and changes to `main`.
