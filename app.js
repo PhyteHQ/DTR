@@ -30,7 +30,7 @@
     { key: 'consumer goods', label: 'Consumer Goods', code: 'GOODS', critical: 2500, warn: 15000 }
   ]);
 
-  const VALID_VIEWS = new Set(['overview', ...POBS.map(pob => pob.key)]);
+  const VALID_VIEWS = new Set(['overview', 'calculator', ...POBS.map(pob => pob.key)]);
   const numberFormat = new Intl.NumberFormat(LOCALE);
   const $ = id => document.getElementById(id);
   const E = {
@@ -39,6 +39,7 @@
     refresh: $('refreshButton'),
     tabs: $('tabs'),
     overview: $('overviewView'),
+    calculator: $('calculatorView'),
     detail: $('detailView'),
     grid: $('overviewGrid'),
     overviewSync: $('overviewSync'),
@@ -810,8 +811,10 @@
 
   function render() {
     renderOverview();
-    const detail = view !== 'overview';
-    E.overview.hidden = detail;
+    const calculator = view === 'calculator';
+    const detail = view !== 'overview' && !calculator;
+    E.overview.hidden = view !== 'overview';
+    E.calculator.hidden = !calculator;
     E.detail.hidden = !detail;
     E.tabs.querySelectorAll('.tab').forEach(button => {
       const active = button.dataset.view === view;
@@ -820,6 +823,7 @@
       else button.removeAttribute('aria-current');
     });
     if (detail) renderDetail(view);
+    if (calculator) window.DTRCalculator?.render?.();
   }
 
   function show(next, itemSearch = '') {

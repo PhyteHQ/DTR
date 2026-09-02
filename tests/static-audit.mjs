@@ -2,20 +2,27 @@ import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { runInNewContext } from 'node:vm';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = path => readFile(join(root, path), 'utf8');
-const [html, manifestRaw, sw, qualityCss, responsiveCss, app, pwa, quality] = await Promise.all([
+const [html, manifestRaw, sw, qualityCss, responsiveCss, calculatorCss, app, calculator, catalogSource, pwa, quality] = await Promise.all([
   read('index.html'),
   read('manifest.webmanifest'),
   read('sw.js'),
   read('dtr-quality.css'),
   read('dtr-responsive.css'),
+  read('dtr-calculator.css'),
   read('app.js'),
+  read('dtr-calculator.js'),
+  read('recipe-catalog.js'),
   read('dtr-pwa.js'),
   read('dtr-quality.js')
 ]);
 const manifest = JSON.parse(manifestRaw);
+const catalogContext = { window: {} };
+runInNewContext(catalogSource, catalogContext);
+const catalog = catalogContext.window.DTR_RECIPE_CATALOG;
 
 const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
 assert.equal(new Set(ids).size, ids.length, 'index.html must not contain duplicate IDs');
@@ -56,8 +63,27 @@ assert.match(app, /REQUIRED \$\{fmt\(bounds\.min\)\}/, 'equal stock limits must 
 assert.match(html, /class="base-hero-telemetry"/, 'POB health and sync must share the compact hero');
 assert(!html.includes('id="healthValue"'), 'structural integrity must not be duplicated in a stat card');
 assert.match(html, /class="stat-grid compact-stats"[\s\S]*?BASE CREDITS[\s\S]*?FREE STORAGE/, 'compact POB stats must retain credits and storage');
+assert.match(html, /data-view="calculator"[\s\S]*?>CALCULATOR</, 'desktop navigation must expose the calculator');
+assert.match(html, /id="calculatorView"/, 'calculator workspace must exist');
+assert(html.indexOf('recipe-catalog.js') < html.indexOf('dtr-calculator.js'), 'recipe catalog must load before the calculator runtime');
 
-const visibleSources = [html, app, await read('dtr-quality.js'), await read('dtr-uplink.js'), pwa].join('\n');
+assert.equal(catalog?.meta?.recipeCount, 292, 'Discovery catalog must contain all 292 supplied recipes');
+assert.equal(catalog?.recipes?.length, 292, 'catalog metadata and recipe payload must agree');
+assert.equal(catalog?.meta?.sourceUrl, 'https://discoverygc.com/gameconfigpublic/', 'catalog must retain its authoritative source URL');
+assert(catalog.recipes.some(recipe => recipe.inputs.some(group => group.kind === 'alternative')), 'catalog must retain alternative recipe inputs');
+assert(catalog.recipes.some(recipe => recipe.inputs.some(group => group.kind === 'dynamic')), 'catalog must retain dynamic recipe inputs');
+assert(catalog.recipes.some(recipe => recipe.bonuses.some(bonus => bonus.id === 'fc_c_grp')), 'catalog must retain Corsair IFF bonuses');
+assert.equal(catalog.recipes.find(recipe => recipe.id === 'module_coreupgrade')?.creditCost, 2500000, 'fixed recipe fees must be preserved');
+assert.equal(catalog.recipes.find(recipe => recipe.id === 'recipe_gold_basic')?.outputs?.[0]?.id, 'commodity_pirate_gold', 'affiliation output must remain the primary recipe product');
+assert.match(calculator, /price_to_buy_from_base \?\? item\?\.buy_price \?\? item\?\.price_buy/, 'calculator must use the POB base-sells price');
+assert.match(calculator, /return value !== null && value > 0 \? value : null/, 'non-sale and missing prices must remain unknown');
+assert.match(calculator, /lineCost: price === null \? null : price \* required/, 'missing prices must not be multiplied as zero');
+assert.match(calculator, /const complete = missingPrices === 0/, 'quote completeness must depend on full price coverage');
+assert.match(calculator, /AUTO LOWEST PRICE/, 'alternative inputs must expose automatic price selection');
+assert.match(calculator, /adjustedPerCycle\(option\?\.qty, factor\) \* cycles/, 'Corsair IFF material factors must be applied per cycle');
+assert.match(calculator, /EXCLUDED FROM CONSUMED MATERIAL COST/, 'catalyst costing semantics must be explicit');
+
+const visibleSources = [html, app, calculator, quality, await read('dtr-uplink.js'), pwa].join('\n');
 const nonEnglishUi = [
   /lang="de"/i,
   /de-DE/,
@@ -82,8 +108,13 @@ assert.match(responsiveCss, /@media \(max-width: 680px\)[\s\S]*?\.transmission-r
 assert.match(responsiveCss, /\.topbar\s*{[\s\S]*?padding:\s*12px 6px 8px/, 'phone header must use compact spacing');
 assert.match(responsiveCss, /orientation:\s*landscape/, 'compact landscape header rules must exist');
 assert.match(responsiveCss, /@media \(min-width: 981px\)[\s\S]*?\.base-card-stats strong\s*{[\s\S]*?font-size:\s*1rem/, 'desktop POB values must remain readable');
-assert.match(quality, /version:\s*'0\.6\.3'/, 'visible build version must match v0.6.3');
-assert.match(sw, /v0\.6\.3/, 'service-worker cache must match v0.6.3');
+assert.match(calculatorCss, /\.calculator-field input,[\s\S]*?min-height:\s*50px/, 'calculator fields must remain touch friendly');
+assert.match(calculatorCss, /@media \(max-width: 760px\)[\s\S]*?\.calculator-table tr\s*{[\s\S]*?display:\s*grid/, 'calculator materials must become mobile cards');
+assert.match(quality, /id="dtrCalculatorLaunch"/, 'mobile header controls must expose the calculator');
+assert.match(quality, /version:\s*'0\.7\.0'/, 'visible build version must match v0.7.0');
+assert.match(sw, /v0\.7\.0/, 'service-worker cache must match v0.7.0');
+assert(sw.includes('./recipe-catalog.js'), 'recipe catalog must be available offline');
+assert(sw.includes('./dtr-calculator.js'), 'calculator runtime must be available offline');
 
 for (const cssPath of localRuntimeRefs.filter(path => path.endsWith('.css'))) {
   const css = await read(cssPath);

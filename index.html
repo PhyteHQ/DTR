@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="./dtr-quality.css">
   <link rel="stylesheet" href="./dtr-uplink.css">
   <link rel="stylesheet" href="./dtr-responsive.css">
+  <link rel="stylesheet" href="./dtr-calculator.css">
 </head>
 <body>
   <div class="ambient-grid" aria-hidden="true"></div>
@@ -53,12 +54,13 @@
 
   <div class="transmission-rail" aria-hidden="true"><span>NETWORK STATUS RECEIVED</span></div>
 
-  <nav class="tabs" id="tabs" aria-label="POB navigation">
+  <nav class="tabs" id="tabs" aria-label="DTR workspace navigation">
     <button class="tab active" type="button" data-view="overview"><span>00</span>ALL NODES</button>
     <button class="tab" type="button" data-view="deterrence-sanctum"><span>01</span>SANCTUM</button>
     <button class="tab" type="button" data-view="ravenna-invicta"><span>02</span>INVICTA</button>
     <button class="tab" type="button" data-view="forja-del-vacio"><span>03</span>FORJA</button>
     <button class="tab" type="button" data-view="fort-torrelavega"><span>04</span>TORRELAVEGA</button>
+    <button class="tab" type="button" data-view="calculator"><span>05</span>CALCULATOR</button>
   </nav>
 
   <main class="command-frame">
@@ -98,6 +100,10 @@
         </div>
         <div class="matrix-wrap" id="networkMatrix"></div>
       </section>
+    </section>
+
+    <section id="calculatorView" class="view calculator-view" hidden>
+      <div class="calculator-empty">LOADING RECIPE CATALOG…</div>
     </section>
 
     <section id="detailView" class="view" hidden>
@@ -193,7 +199,9 @@
   </aside>
 
   <script src="./dtr-pwa.js"></script>
+  <script src="./recipe-catalog.js"></script>
   <script src="./app.js"></script>
+  <script src="./dtr-calculator.js"></script>
   <script src="./dtr-quality.js"></script>
   <script src="./dtr-uplink.js"></script>
 </body>
