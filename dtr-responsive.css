@@ -1,4 +1,4 @@
-/* DTR v0.6 responsive and accessibility layer */
+/* DTR v0.6.1 responsive and accessibility layer */
 :root {
   --muted: #958a91;
 }
@@ -84,13 +84,78 @@ input:focus-visible,
 }
 
 @media (max-width: 680px) {
+  .topbar {
+    gap: 8px;
+    padding: 12px 6px 8px;
+  }
+
+  .brand-shell {
+    gap: 10px;
+  }
+
+  .brand-sigil {
+    width: 58px;
+    height: 58px;
+  }
+
+  .eyebrow {
+    margin-bottom: 3px;
+    font-size: 0.52rem;
+    letter-spacing: 0.14em;
+  }
+
+  .brand-copy h1 {
+    gap: 6px;
+  }
+
+  .brand-main {
+    font-size: 1.95rem;
+  }
+
+  .brand-slash {
+    font-size: 1.05rem;
+  }
+
+  .brand-sub {
+    font-size: 0.96rem;
+  }
+
+  .brand-meta {
+    gap: 5px;
+    margin-top: 5px;
+    font-size: 0.52rem;
+  }
+
   .header-actions {
     grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 5px;
+    min-height: 52px;
   }
 
   .uplink {
     grid-template-columns: auto minmax(0, 1fr) auto;
     gap: 8px;
+    min-height: 52px;
+    padding: 6px 8px;
+  }
+
+  .uplink-copy {
+    min-width: 0;
+  }
+
+  .uplink-copy small,
+  .uplink-copy strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .uplink-copy small {
+    font-size: 0.62rem;
+  }
+
+  .uplink-copy strong {
+    font-size: 0.78rem;
   }
 
   .uplink button {
@@ -100,6 +165,32 @@ input:focus-visible,
     min-width: 56px;
     min-height: 44px;
     padding: 0 9px;
+    font-size: 0.7rem;
+  }
+
+  .system-button,
+  .install-button {
+    min-width: 62px;
+    min-height: 52px;
+    padding: 5px 7px;
+  }
+
+  .system-button span,
+  .install-button span {
+    font-size: 0.7rem;
+  }
+
+  .system-button small,
+  .install-button small {
+    font-size: 0.6rem;
+  }
+
+  .transmission-rail {
+    display: none;
+  }
+
+  .command-frame {
+    margin-top: 0;
   }
 
   .network-metrics,
@@ -194,12 +285,84 @@ input:focus-visible,
 
   .system-button,
   .install-button {
-    min-width: 62px;
+    min-width: 58px;
   }
 
   .uplink button {
     min-width: 52px;
     padding-inline: 7px;
     font-size: 0.7rem;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 560px) and (max-width: 1000px) {
+  .topbar {
+    width: min(1180px, calc(100% - 24px));
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    padding: 9px 0;
+  }
+
+  .brand-shell {
+    flex: 0 1 340px;
+    gap: 9px;
+  }
+
+  .brand-sigil {
+    width: 52px;
+    height: 52px;
+  }
+
+  .eyebrow {
+    margin-bottom: 2px;
+    font-size: 0.48rem;
+  }
+
+  .brand-main {
+    font-size: 1.85rem;
+  }
+
+  .brand-slash {
+    font-size: 1rem;
+  }
+
+  .brand-sub {
+    font-size: 0.9rem;
+  }
+
+  .brand-meta {
+    margin-top: 4px;
+    font-size: 0.48rem;
+  }
+
+  .header-actions {
+    display: grid;
+    flex: 1 1 auto;
+    grid-template-columns: minmax(180px, 1fr) auto auto;
+    gap: 5px;
+    width: auto;
+    min-width: 0;
+  }
+
+  .uplink {
+    min-width: 0;
+    min-height: 52px;
+    padding: 6px 8px;
+  }
+
+  .uplink button,
+  .system-button,
+  .install-button {
+    min-height: 44px;
+  }
+
+  .transmission-rail {
+    display: none;
+  }
+
+  .dtr-quickbar {
+    min-height: 46px;
+    padding-block: 3px;
   }
 }

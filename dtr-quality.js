@@ -3,7 +3,7 @@
   'use strict';
   if (window.DTRQuality) return;
 
-  const META = Object.freeze({ version: '0.6.0', build: '2026.09.02-B' });
+  const META = Object.freeze({ version: '0.6.1', build: '2026.09.02-C' });
   const ATTENTION_KEY = 'dtr:attention:v1';
   const runtimeEvents = [];
   const $ = id => document.getElementById(id);
@@ -44,10 +44,10 @@
     const tabs = $('tabs');
     if (!tabs) return;
     tabs.insertAdjacentHTML('afterend', `<section class="dtr-quickbar" id="dtrQuickbar" aria-label="Command filter">
-      <button class="dtr-attention-toggle" id="dtrAttentionToggle" type="button" aria-pressed="false">
+      <button class="dtr-attention-toggle" id="dtrAttentionToggle" type="button" aria-pressed="false" aria-label="Show only issues">
         <span>ATTENTION</span><small>ONLY ISSUES</small><b id="dtrAttentionCount">0</b>
       </button>
-      <div class="dtr-quickbar-state"><small>COMMAND FILTER</small><strong id="dtrAttentionSummary">SHOWING ALL NETWORK DATA</strong></div>
+      <div class="dtr-quickbar-state"><small>COMMAND FILTER</small><strong id="dtrAttentionSummary">ALL NETWORK DATA</strong></div>
       <span class="dtr-build-chip">v${META.version} // ${META.build}</span>
     </section>`);
     $('dtrAttentionToggle')?.addEventListener('click', () => {
@@ -108,7 +108,10 @@
   function applyAttention() {
     document.body.classList.toggle('dtr-attention-mode', attention);
     const toggle = $('dtrAttentionToggle');
-    if (toggle) toggle.setAttribute('aria-pressed', attention ? 'true' : 'false');
+    if (toggle) {
+      toggle.setAttribute('aria-pressed', attention ? 'true' : 'false');
+      toggle.setAttribute('aria-label', attention ? 'Show all network data' : 'Show only issues');
+    }
 
     const count = globalAlertCount();
     setText($('dtrAttentionCount'), count);
@@ -116,9 +119,9 @@
       $('dtrAttentionSummary'),
       attention
         ? count
-          ? `${count} ACTIVE CONDITION${count === 1 ? '' : 'S'} // NORMAL DATA HIDDEN`
+          ? `${count} ACTIVE CONDITION${count === 1 ? '' : 'S'}`
           : 'ALL CLEAR // NO ACTIVE CONDITIONS'
-        : 'SHOWING ALL NETWORK DATA'
+        : 'ALL NETWORK DATA'
     );
 
     document.querySelectorAll('#overviewGrid .base-card').forEach(card => {

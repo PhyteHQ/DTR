@@ -170,19 +170,39 @@
   }
 
   .dtr-quickbar {
-    position: sticky;
-    top: var(--sticky-offset, 0px);
+    position: relative;
+    top: auto;
     z-index: 85;
     gap: 8px;
-    padding: 6px 8px;
+    min-height: 48px;
+    padding: 2px 8px;
     background: rgba(5, 5, 6, 0.97);
     backdrop-filter: blur(14px);
   }
 
   .dtr-attention-toggle {
-    min-width: 146px;
-    min-height: 46px;
-    padding: 6px 9px;
+    grid-template-areas: "label count";
+    min-width: 132px;
+    min-height: 44px;
+    padding: 5px 8px;
+  }
+
+  .dtr-attention-toggle small,
+  .dtr-quickbar-state small {
+    display: none;
+  }
+
+  .dtr-attention-toggle b {
+    min-width: 28px;
+    height: 28px;
+  }
+
+  .dtr-quickbar-state {
+    display: block;
+  }
+
+  .dtr-quickbar-state strong {
+    font-size: 0.7rem;
   }
 
   .dtr-build-chip {
@@ -274,18 +294,14 @@
 }
 
 @media (max-width: 390px) {
-  .dtr-quickbar-state small {
-    display: none;
-  }
-
   .dtr-quickbar-state strong {
-    font-size: 0.7rem;
+    font-size: 0.67rem;
     line-height: 1.25;
     white-space: normal;
   }
 
   .dtr-attention-toggle {
-    min-width: 138px;
+    min-width: 124px;
   }
 
   .dtr-mobile-nav button {
