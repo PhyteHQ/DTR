@@ -1,1 +1,102 @@
-:root{--sigil:url("./assets/icon-512.png")!important}.stock-cell{min-width:190px}.stock-level{width:100%;min-width:170px;color:var(--muted)}.stock-range{display:flex;justify-content:space-between;gap:10px;margin-bottom:5px;color:var(--muted);font:6px "Oxanium",sans-serif;letter-spacing:.045em}.stock-track{position:relative;height:7px;overflow:hidden;background:#1a1416;border:1px solid rgba(157,48,57,.09)}.stock-track>i{display:block;height:100%;background:var(--good);opacity:.88;transition:width .22s ease}.stock-track>mark{position:absolute;top:-1px;bottom:-1px;width:2px;translate:-1px 0;background:var(--gold);box-shadow:0 0 5px rgba(200,174,130,.45)}.stock-level[data-tone=warn] .stock-track>i{background:var(--warn)}.stock-level[data-tone=danger] .stock-track>i{background:var(--bad)}.stock-level[data-tone=muted] .stock-track>i{background:#4a4246}.stock-level.compact{margin-top:9px;min-width:0}.stock-level.compact .stock-range{font-size:6px}.stock-level.compact .stock-track{height:6px}#detailDelta,#healthDelta,#creditsDelta,#storageDelta{display:none!important}@media(max-width:640px){.stock-cell{min-width:0!important;padding-top:8px!important}.stock-level{min-width:0}.stock-range{font-size:6px}.stock-track{height:8px}}
+:root {
+  --sigil: url("./assets/icon-512.png") !important;
+}
+
+.stock-cell {
+  min-width: 190px;
+}
+
+.stock-level {
+  width: 100%;
+  min-width: 170px;
+  color: var(--muted);
+}
+
+.stock-range {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+  color: var(--muted);
+  font: 0.75rem "Oxanium", sans-serif;
+  letter-spacing: 0.045em;
+}
+
+.stock-track {
+  position: relative;
+  height: 8px;
+  overflow: hidden;
+  background: #1a1416;
+  border: 1px solid rgba(157, 48, 57, 0.16);
+}
+
+.stock-track > i {
+  display: block;
+  height: 100%;
+  background: var(--good);
+  opacity: 0.9;
+  transition: width 0.22s ease;
+}
+
+.stock-track > mark {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  width: 2px;
+  translate: -1px 0;
+  background: var(--gold);
+  box-shadow: 0 0 5px rgba(200, 174, 130, 0.45);
+}
+
+.stock-level[data-tone="warn"] .stock-track > i {
+  background: var(--warn);
+}
+
+.stock-level[data-tone="danger"] .stock-track > i {
+  background: var(--bad);
+}
+
+.stock-level[data-tone="muted"] .stock-track > i {
+  background: #4a4246;
+}
+
+.stock-level.compact {
+  min-width: 0;
+  margin-top: 9px;
+}
+
+.stock-level.compact .stock-range {
+  font-size: 0.72rem;
+}
+
+.stock-level.compact .stock-track {
+  height: 7px;
+}
+
+.stock-unavailable {
+  display: inline-block;
+  color: var(--muted);
+  font: 600 0.8rem "Oxanium", sans-serif;
+}
+
+#detailDelta,
+#healthDelta,
+#creditsDelta,
+#storageDelta {
+  display: none !important;
+}
+
+@media (max-width: 640px) {
+  .stock-cell {
+    min-width: 0 !important;
+    padding-top: 10px !important;
+  }
+
+  .stock-level {
+    min-width: 0;
+  }
+
+  .stock-track {
+    height: 10px;
+  }
+}

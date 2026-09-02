@@ -3,11 +3,11 @@
   "name": "DTR POB Network Control",
   "short_name": "DTR Control",
   "description": "Corsair POB telemetry, facility maintenance and reserve control.",
+  "lang": "en-GB",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "display_override": [
-    "window-controls-overlay",
     "standalone",
     "minimal-ui"
   ],
