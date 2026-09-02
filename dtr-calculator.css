@@ -382,6 +382,82 @@
   font-weight: 600;
 }
 
+.calculator-table th:nth-child(4) {
+  min-width: 210px;
+}
+
+.calculator-price-editor {
+  display: grid;
+  gap: 6px;
+  min-width: 190px;
+}
+
+.calculator-price-editor > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 38px;
+}
+
+.calculator-price-editor input {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 0 10px;
+  border: 1px solid rgba(157, 48, 57, 0.38);
+  border-radius: 0;
+  outline: 0;
+  background: #050405;
+  color: var(--text);
+  font: 600 1rem "Oxanium", sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.calculator-price-editor > div > span {
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(157, 48, 57, 0.38);
+  border-left: 0;
+  color: #948990;
+  font: 700 0.7rem "Oxanium", sans-serif;
+}
+
+.calculator-price-editor input:focus {
+  border-color: var(--red-bright);
+  box-shadow: 0 0 0 2px rgba(189, 70, 82, 0.12);
+}
+
+.calculator-price-editor[data-source="manual"] input,
+.calculator-price-editor[data-source="manual"] > div > span {
+  border-color: rgba(210, 167, 103, 0.58);
+}
+
+.calculator-price-editor > small {
+  color: #8f858b;
+  font: 0.7rem "Oxanium", sans-serif;
+  letter-spacing: 0.035em;
+  line-height: 1.35;
+}
+
+.calculator-price-editor[data-source="manual"] > small {
+  color: var(--warn);
+}
+
+.calculator-price-editor > button {
+  min-height: 38px;
+  padding: 6px 9px;
+  border: 1px solid rgba(210, 167, 103, 0.42);
+  background: rgba(210, 167, 103, 0.055);
+  color: var(--warn);
+  font: 700 0.68rem "Oxanium", sans-serif;
+  letter-spacing: 0.045em;
+  cursor: pointer;
+}
+
+.calculator-price-editor > button:hover,
+.calculator-price-editor > button:focus-visible {
+  border-color: var(--warn);
+  background: rgba(210, 167, 103, 0.12);
+}
+
 .calculator-status {
   display: inline-flex;
   align-items: center;
@@ -512,6 +588,15 @@
   font: 600 0.82rem "Oxanium", sans-serif;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.calculator-catalyst-grid dd em {
+  display: block;
+  margin-top: 3px;
+  color: var(--warn);
+  font-size: 0.62rem;
+  font-style: normal;
+  letter-spacing: 0.04em;
 }
 
 .calculator-empty {
@@ -704,6 +789,10 @@
     border-bottom: 1px solid rgba(157, 48, 57, 0.13);
   }
 
+  .calculator-table td:nth-child(4) {
+    grid-column: 1 / -1;
+  }
+
   .calculator-table td::before {
     content: attr(data-label);
     display: block;
@@ -730,6 +819,19 @@
 
   .calculator-status {
     min-height: 36px;
+  }
+
+  .calculator-price-editor {
+    min-width: 0;
+  }
+
+  .calculator-price-editor input {
+    min-height: 50px;
+    font-size: 1.05rem;
+  }
+
+  .calculator-price-editor > button {
+    min-height: 44px;
   }
 
   .calculator-alternative select {

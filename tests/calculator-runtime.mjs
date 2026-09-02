@@ -21,17 +21,19 @@ const pobs = [
   { key: 'fort-torrelavega', short: 'TORRELAVEGA', label: 'Fort Torrelavega' }
 ];
 
-function calculatorHtml(recipeId, shopItems, quantity = 1) {
+function calculatorRuntime(recipeId, shopItems, quantity = 1, priceOverrides = {}, search = '') {
   const storage = new Map([["dtr:calculator:v1", JSON.stringify({
     recipeId,
-    search: '',
+    search,
     pobKey: 'deterrence-sanctum',
     quantity,
-    alternatives: {}
+    alternatives: {},
+    priceOverrides
   })]]);
+  const listeners = {};
   const calculatorRoot = {
     innerHTML: '',
-    addEventListener() {}
+    addEventListener(type, listener) { listeners[type] = listener; }
   };
   const sandbox = {
     console,
@@ -49,6 +51,7 @@ function calculatorHtml(recipeId, shopItems, quantity = 1) {
     },
     document: {
       readyState: 'complete',
+      activeElement: null,
       getElementById(id) { return id === 'calculatorView' ? calculatorRoot : null; }
     },
     window: {
@@ -69,7 +72,15 @@ function calculatorHtml(recipeId, shopItems, quantity = 1) {
     }
   };
   runInNewContext(calculatorSource, sandbox);
-  return calculatorRoot.innerHTML;
+  return {
+    get html() { return calculatorRoot.innerHTML; },
+    listeners,
+    storage
+  };
+}
+
+function calculatorHtml(recipeId, shopItems, quantity = 1, priceOverrides = {}, search = '') {
+  return calculatorRuntime(recipeId, shopItems, quantity, priceOverrides, search).html;
 }
 
 function inventoryFor(recipe, price) {
@@ -93,8 +104,49 @@ assert(completeHtml.includes('QUOTE READY // STOCK AVAILABLE'), 'complete stocke
 const partialHtml = calculatorHtml(coreUpgrade.id, inventoryFor(coreUpgrade, completePrice).slice(0, 1));
 assert(partialHtml.includes('MATERIAL PRICES MISSING'), 'unlisted inputs must keep the quote incomplete');
 assert(partialHtml.includes('NOT LISTED'), 'unlisted inputs must be explicit');
+assert(partialHtml.includes('data-calculator-price='), 'every consumed material must expose an editable unit price');
+assert(partialHtml.includes('NO POB PRICE // ENTER MANUALLY'), 'missing POB prices must invite a manual value');
 assert(/TOTAL BUILD COST<\/small><strong>—<\/strong>/.test(partialHtml), 'incomplete total must remain unknown');
 assert(!partialHtml.includes('NaN'), 'missing prices must never produce NaN');
+
+const manualUnitPrice = 7;
+const manualPrices = Object.fromEntries(
+  coreUpgrade.inputs.flatMap(group => group.options).map(option => [option.id, manualUnitPrice])
+);
+const expectedManualCost = coreUpgrade.creditCost
+  + coreUpgrade.inputs.reduce((total, group) => total + group.options[0].qty * manualUnitPrice, 0);
+const manualHtml = calculatorHtml(coreUpgrade.id, [], 1, {
+  'deterrence-sanctum': manualPrices
+});
+assert(manualHtml.includes(`${expectedManualCost.toLocaleString('en-GB')} cr`), 'manual prices must complete a quote when the POB does not list the materials');
+assert(manualHtml.includes('MANUAL PRICE // SAVED FOR THIS POB'), 'manual price source must be visible');
+assert(manualHtml.includes('MANUAL // NOT LISTED'), 'manual pricing must not hide that a commodity is absent from the POB');
+assert(manualHtml.includes('USE POB PRICE'), 'manual prices must provide a reset to the live POB value');
+
+const editedOption = coreUpgrade.inputs[0].options[0];
+const editRuntime = calculatorRuntime(coreUpgrade.id, []);
+editRuntime.listeners.change({
+  target: {
+    dataset: { calculatorPrice: editedOption.id },
+    value: '13',
+    matches(selector) { return selector === '[data-calculator-price]'; }
+  }
+});
+const savedAfterEdit = JSON.parse(editRuntime.storage.get('dtr:calculator:v1'));
+assert.equal(savedAfterEdit.priceOverrides['deterrence-sanctum'][editedOption.id], 13, 'edited prices must persist for the selected POB and commodity');
+assert(editRuntime.html.includes('MANUAL PRICE // SAVED FOR THIS POB'), 'editing a price must immediately switch its visible source to manual');
+editRuntime.listeners.click({
+  target: {
+    closest(selector) {
+      return selector === '[data-calculator-price-reset]'
+        ? { dataset: { calculatorPriceReset: editedOption.id } }
+        : null;
+    }
+  }
+});
+const savedAfterReset = JSON.parse(editRuntime.storage.get('dtr:calculator:v1'));
+assert(!savedAfterReset.priceOverrides['deterrence-sanctum'], 'resetting a price must remove the POB override');
+assert(editRuntime.html.includes('NO POB PRICE // ENTER MANUALLY'), 'resetting an unlisted commodity must restore the blank price state');
 
 const alternativeRecipe = catalog.recipes.find(recipe => recipe.inputs.some(group => group.options.length > 1));
 assert(alternativeRecipe, 'alternative-input fixture recipe must exist');
@@ -124,4 +176,11 @@ const corsairHtml = calculatorHtml(corsairRecipe.id, inventoryFor(corsairRecipe,
 assert(corsairHtml.includes(`CORSAIR IFF BONUS // ${corsairFactor.toFixed(2)}× MATERIALS`), 'Corsair IFF factor must be visible');
 assert(corsairHtml.includes(`${expectedCorsairCost.toLocaleString('en-GB')} cr`), 'Corsair IFF factor must alter material cost');
 
-console.log('DTR calculator runtime audit passed (complete, missing, alternative-price and Corsair-IFF scenarios).');
+const wildcatHtml = calculatorHtml('recipe_gold_basic', [], 1, {}, 'wildcat gold');
+assert(wildcatHtml.includes('4 MATCHES'), 'Wildcat Gold search must expose basic, advanced, bulk and reprocessing recipes');
+assert(wildcatHtml.includes('Gold refining, basic → Wildcat Gold × 650'), 'basic Wildcat Gold output must be labelled');
+assert(wildcatHtml.includes('Gold refining, advanced → Wildcat Gold × 800'), 'advanced Wildcat Gold output must be labelled');
+assert(wildcatHtml.includes('Gold refining, bulk → Wildcat Gold × 4,000'), 'bulk Wildcat Gold output must be labelled');
+assert(wildcatHtml.includes('Wildcat Gold reprocessing → Gold × 100'), 'the separate Wildcat-to-Gold conversion must remain distinct');
+
+console.log('DTR calculator runtime audit passed (live, manual, missing, variants, alternative-price and Corsair-IFF scenarios).');

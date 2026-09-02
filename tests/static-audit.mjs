@@ -75,10 +75,16 @@ assert(catalog.recipes.some(recipe => recipe.inputs.some(group => group.kind ===
 assert(catalog.recipes.some(recipe => recipe.bonuses.some(bonus => bonus.id === 'fc_c_grp')), 'catalog must retain Corsair IFF bonuses');
 assert.equal(catalog.recipes.find(recipe => recipe.id === 'module_coreupgrade')?.creditCost, 2500000, 'fixed recipe fees must be preserved');
 assert.equal(catalog.recipes.find(recipe => recipe.id === 'recipe_gold_basic')?.outputs?.[0]?.id, 'commodity_pirate_gold', 'affiliation output must remain the primary recipe product');
+assert.equal(catalog.recipes.find(recipe => recipe.id === 'recipe_gold_basic')?.outputs?.[0]?.name, 'Wildcat Gold', 'recipe titles must not overwrite actual product names');
+assert.equal(catalog.recipes.find(recipe => recipe.id === 'recipe_gold_advanced')?.outputs?.[0]?.qty, 800, 'advanced Gold refining output must be preserved');
+assert.equal(catalog.recipes.find(recipe => recipe.id === 'recipe_gold_bulk')?.outputs?.[0]?.qty, 4000, 'bulk Gold refining output must be preserved');
 assert.match(calculator, /price_to_buy_from_base \?\? item\?\.buy_price \?\? item\?\.price_buy/, 'calculator must use the POB base-sells price');
 assert.match(calculator, /return value !== null && value > 0 \? value : null/, 'non-sale and missing prices must remain unknown');
-assert.match(calculator, /lineCost: price === null \? null : price \* required/, 'missing prices must not be multiplied as zero');
+assert.match(calculator, /lineCost: snapshot\.price === null \? null : snapshot\.price \* required/, 'missing prices must not be multiplied as zero');
 assert.match(calculator, /const complete = missingPrices === 0/, 'quote completeness must depend on full price coverage');
+assert.match(calculator, /priceOverrides\?\.\[pobKey\]\?\.\[priceKey\(option\)\]/, 'manual prices must be scoped by POB and commodity');
+assert.match(calculator, /data-calculator-price=/, 'consumed material prices must be editable');
+assert.match(calculator, /data-calculator-price-reset=/, 'manual prices must be resettable to the POB feed');
 assert.match(calculator, /AUTO LOWEST PRICE/, 'alternative inputs must expose automatic price selection');
 assert.match(calculator, /adjustedPerCycle\(option\?\.qty, factor\) \* cycles/, 'Corsair IFF material factors must be applied per cycle');
 assert.match(calculator, /EXCLUDED FROM CONSUMED MATERIAL COST/, 'catalyst costing semantics must be explicit');
@@ -109,10 +115,12 @@ assert.match(responsiveCss, /\.topbar\s*{[\s\S]*?padding:\s*12px 6px 8px/, 'phon
 assert.match(responsiveCss, /orientation:\s*landscape/, 'compact landscape header rules must exist');
 assert.match(responsiveCss, /@media \(min-width: 981px\)[\s\S]*?\.base-card-stats strong\s*{[\s\S]*?font-size:\s*1rem/, 'desktop POB values must remain readable');
 assert.match(calculatorCss, /\.calculator-field input,[\s\S]*?min-height:\s*50px/, 'calculator fields must remain touch friendly');
+assert.match(calculatorCss, /\.calculator-price-editor input\s*{[\s\S]*?min-height:\s*46px/, 'editable material prices must remain touch friendly on desktop');
+assert.match(calculatorCss, /@media \(max-width: 760px\)[\s\S]*?\.calculator-price-editor > button\s*{[\s\S]*?min-height:\s*44px/, 'manual-price reset must remain touch friendly on phones');
 assert.match(calculatorCss, /@media \(max-width: 760px\)[\s\S]*?\.calculator-table tr\s*{[\s\S]*?display:\s*grid/, 'calculator materials must become mobile cards');
 assert.match(quality, /id="dtrCalculatorLaunch"/, 'mobile header controls must expose the calculator');
-assert.match(quality, /version:\s*'0\.7\.0'/, 'visible build version must match v0.7.0');
-assert.match(sw, /v0\.7\.0/, 'service-worker cache must match v0.7.0');
+assert.match(quality, /version:\s*'0\.7\.1'/, 'visible build version must match v0.7.1');
+assert.match(sw, /v0\.7\.1/, 'service-worker cache must match v0.7.1');
 assert(sw.includes('./recipe-catalog.js'), 'recipe catalog must be available offline');
 assert(sw.includes('./dtr-calculator.js'), 'calculator runtime must be available offline');
 
