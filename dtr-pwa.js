@@ -10,6 +10,24 @@
   const isAndroid=(ua=navigator.userAgent)=>/Android/i.test(ua);
   const isIos=(ua=navigator.userAgent,platform=navigator.platform,maxTouchPoints=navigator.maxTouchPoints)=>/iPad|iPhone|iPod/i.test(ua)||(platform==='MacIntel'&&maxTouchPoints>1);
 
+  function installStyles(){
+    if($('dtrPwaStyle'))return;
+    const style=document.createElement('style');
+    style.id='dtrPwaStyle';
+    style.textContent=`
+      @media(max-width:760px){
+        #installSheet{width:calc(100% - 28px)!important;max-width:660px!important;padding:18px!important;gap:18px!important}
+        #installSheet .install-actions{display:grid!important;grid-template-columns:1fr!important;width:100%!important;gap:8px!important}
+        #installSheet .install-actions button{width:100%!important;min-height:68px!important;font-size:10px!important;letter-spacing:.12em!important}
+        #installSheet #installPrimary{border-color:rgba(200,174,130,.42)!important;color:var(--gold)!important;background:linear-gradient(180deg,rgba(200,174,130,.09),rgba(157,48,57,.035))!important}
+        #installSheet #installClose{color:#8a7b84!important;background:rgba(20,24,31,.56)!important}
+        #installSheet strong{font-size:18px!important;letter-spacing:.035em!important}
+        #installSheet span{font-size:10px!important;line-height:1.55!important;letter-spacing:.035em!important}
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   function elements(){
     const panel=$('installSheet');
     return{
@@ -128,6 +146,7 @@
   }
 
   async function register(){
+    installStyles();
     bindUi();
     syncInstallState();
     if(!('serviceWorker'in navigator)){
