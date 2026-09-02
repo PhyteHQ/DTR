@@ -21,12 +21,14 @@ Mobile-first operational dashboard for the DTR faction's four player-owned bases
 - POB health and last-sync telemetry live in the detail header, leaving only credits and storage as compact summary cards.
 - Equal API minimum and maximum stock limits are shown once as a required stock value.
 - On wide desktop screens, the command filter aligns with the dashboard shell and overview figures use larger display type.
+- Currency values use Discovery's `$` notation throughout the dashboard and calculator.
 - The recipe calculator contains 292 recipes generated from Discovery's public `base_recipe_items.cfg` and `base_recipe_modules.cfg` data.
-- Calculator material prices start with the selected DTR POB's **BASE SELLS** quotation and remain editable per commodity. Manual prices are saved locally per POB, can be reset to the live value and can complete a quote for an unlisted commodity without hiding its stock/listing status.
+- Calculator material prices start with the selected DTR POB's Darkstat `price` (**BASE SELLS**) quotation and remain editable per commodity. Manual prices are saved locally per POB, can be reset to the live value and can complete a quote for an unlisted commodity without hiding its stock/listing status.
 - Unlisted commodities and missing sale prices remain unknown (`—`) until a manual price is entered; they are never treated as zero.
 - Recipe search includes actual outputs as well as recipe titles, so affiliation products such as Wildcat Gold expose their basic, advanced and bulk recipes alongside the separate reprocessing recipe.
-- Alternative recipe inputs automatically prefer the least expensive priced option at the selected POB and remain manually selectable.
-- Explicitly reported stock shortages are shown separately from price coverage. Catalysts are listed as retained requirements and are not added to consumed-material cost.
+- Alternative recipe inputs use a clearly labelled material chooser, automatically prefer the best-priced available option at the selected POB and can be returned to automatic mode after a manual selection.
+- The quote summary shows pricing completeness as plain status text and only displays a recipe-fee card when the selected recipe actually charges one.
+- Explicitly reported stock shortages are shown separately from pricing completeness. Catalysts are listed as retained requirements and are not added to consumed-material cost.
 
 ## Recipe catalog
 

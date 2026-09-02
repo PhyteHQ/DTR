@@ -121,7 +121,7 @@
     "'": '&#39;'
   })[character]);
   const fmt = value => Number.isFinite(value) ? numberFormat.format(Math.round(value)) : '—';
-  const cash = value => Number.isFinite(value) ? `${fmt(value)} cr` : '—';
+  const cash = value => Number.isFinite(value) ? `$${fmt(value)}` : '—';
 
   function rememberStorageFault(action, key, error) {
     storageFaults.push({
@@ -365,15 +365,15 @@
   }
 
   function buy(item) {
-    return finite(item?.price_to_sell_to_base ?? item?.sell_price ?? item?.price_sell);
+    return finite(item?.sell_price ?? item?.price_to_sell_to_base ?? item?.price_sell);
   }
 
   function sell(item) {
-    return finite(item?.price_to_buy_from_base ?? item?.buy_price ?? item?.price_buy);
+    return finite(item?.price ?? item?.price_to_buy_from_base ?? item?.buy_price ?? item?.price_buy);
   }
 
   function price(value) {
-    return value === null ? '—' : `${fmt(value)} cr`;
+    return value === null ? '—' : `$${fmt(value)}`;
   }
 
   function itemByName(base, name) {

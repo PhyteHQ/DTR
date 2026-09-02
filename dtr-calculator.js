@@ -31,7 +31,7 @@
     "'": '&#39;'
   })[character]);
   const fmt = value => Number.isFinite(value) ? numberFormat.format(Math.round(value)) : '—';
-  const money = value => Number.isFinite(value) ? `${fmt(value)} cr` : '—';
+  const money = value => Number.isFinite(value) ? `$${fmt(value)}` : '—';
 
   function cleanPriceOverrides(value) {
     if (!value || typeof value !== 'object') return {};
@@ -136,7 +136,12 @@
 
   function pobSalePrice(item) {
     if (!item) return null;
-    const value = finite(item?.price_to_buy_from_base ?? item?.buy_price ?? item?.price_buy);
+    const value = finite(
+      item?.price
+      ?? item?.price_to_buy_from_base
+      ?? item?.buy_price
+      ?? item?.price_buy
+    );
     return value !== null && value > 0 ? value : null;
   }
 
@@ -400,17 +405,33 @@
   function alternativeMarkup(row) {
     if ((row.group?.options || []).length <= 1) return '';
     const key = `${row.recipe.id}:${row.index}`;
-    const explicit = Boolean(state.alternatives?.[key]);
-    const options = row.group.options.map(option => {
+    const requestedId = state.alternatives?.[key] || '';
+    const explicitId = row.group.options.some(option => option.id === requestedId) ? requestedId : '';
+    const automatic = automaticOption(row.base, row.group.options);
+    const optionSummary = option => {
       const snapshot = optionSnapshot(row.base, option);
-      const suffix = snapshot.price !== null
-        ? `${snapshot.priceSource === 'manual' ? 'MANUAL' : 'POB'} ${money(snapshot.price)} / UNIT`
+      const price = snapshot.price !== null
+        ? `${snapshot.priceSource === 'manual' ? 'MANUAL' : 'POB'} ${money(snapshot.price)}`
         : snapshot.item
-          ? 'NO SALE PRICE'
+          ? 'NO PRICE'
           : 'NOT LISTED';
-      return `<option value="${esc(option.id)}"${option.id === row.option.id ? ' selected' : ''}>${esc(option.name)} · ${suffix}</option>`;
+      const stock = snapshot.stock !== null ? `STOCK ${fmt(snapshot.stock)}` : 'STOCK UNKNOWN';
+      return `${option.name} · ${price} · ${stock}`;
+    };
+    const options = row.group.options.map(option => {
+      return `<option value="${esc(option.id)}"${option.id === explicitId ? ' selected' : ''}>${esc(optionSummary(option))}</option>`;
     }).join('');
-    return `<label class="calculator-alternative"><span>${row.group.kind === 'dynamic' ? 'DYNAMIC INPUT' : 'ALTERNATIVE INPUT'} // ${explicit ? 'SELECTED' : 'AUTO LOWEST PRICE'}</span><select data-calculator-alternative="${row.index}">${options}</select></label>`;
+    const automaticLabel = automatic
+      ? `AUTO · ${optionSummary(automatic)}`
+      : 'AUTO · BEST AVAILABLE OPTION';
+    return `<label class="calculator-alternative">
+      <span>CHOOSE MATERIAL // ONE REQUIRED</span>
+      <select data-calculator-alternative="${row.index}" aria-label="Choose one recipe material">
+        <option value=""${explicitId ? '' : ' selected'}>${esc(automaticLabel)}</option>
+        ${options}
+      </select>
+      <small>${explicitId ? 'MANUAL MATERIAL SELECTION' : 'AUTOMATICALLY USING THE BEST PRICED AVAILABLE OPTION'}</small>
+    </label>`;
   }
 
   function priceEditorMarkup(row) {
@@ -419,17 +440,30 @@
       : row.livePrice !== null
         ? 'LIVE POB PRICE // EDIT TO OVERRIDE'
         : 'NO POB PRICE // ENTER MANUALLY';
+    const resetLabel = row.livePrice !== null ? 'USE POB PRICE' : 'CLEAR MANUAL PRICE';
+    const resetAria = row.livePrice !== null
+      ? `Use live POB price for ${row.option.name}`
+      : `Clear manual price for ${row.option.name}`;
     return `<div class="calculator-price-editor" data-source="${row.priceSource}">
-      <div><input type="number" inputmode="decimal" min="0" step="any" value="${row.price === null ? '' : esc(row.price)}" placeholder="ENTER PRICE" data-calculator-price="${esc(priceKey(row.option))}" aria-label="Unit price for ${esc(row.option.name)}"><span>CR</span></div>
+      <div><span aria-hidden="true">$</span><input type="number" inputmode="decimal" min="0" step="any" value="${row.price === null ? '' : esc(row.price)}" placeholder="ENTER PRICE" data-calculator-price="${esc(priceKey(row.option))}" aria-label="Unit price in dollars for ${esc(row.option.name)}"></div>
       <small>${sourceLabel}</small>
-      ${row.priceSource === 'manual' ? `<button type="button" data-calculator-price-reset="${esc(priceKey(row.option))}" aria-label="Use live POB price for ${esc(row.option.name)}">USE POB PRICE</button>` : ''}
+      ${row.priceSource === 'manual' ? `<button type="button" data-calculator-price-reset="${esc(priceKey(row.option))}" aria-label="${esc(resetAria)}">${resetLabel}</button>` : ''}
     </div>`;
+  }
+
+  function priceCoverageLabel(result) {
+    const total = result.rows.length;
+    if (!total) return 'NO CONSUMED MATERIALS';
+    const priced = total - result.missingPrices;
+    return result.complete
+      ? `ALL ${total} MATERIAL${total === 1 ? '' : 'S'} PRICED`
+      : `${priced} OF ${total} MATERIAL${total === 1 ? '' : 'S'} PRICED`;
   }
 
   function materialRowsMarkup(rows) {
     if (!rows.length) return '<div class="calculator-empty" data-tone="good">THIS RECIPE HAS NO CONSUMED MATERIAL INPUTS</div>';
     return `<div class="calculator-table-wrap"><table class="calculator-table"><thead><tr><th>MATERIAL</th><th>REQUIRED</th><th>POB STOCK</th><th>UNIT PRICE</th><th>LINE COST</th><th>STATUS</th></tr></thead><tbody>${rows.map(row => `<tr data-calculator-tone="${row.availability.tone}">
-      <td data-label="MATERIAL"><strong>${esc(row.option.name)}</strong><small>${esc(row.option.id)}</small>${alternativeMarkup(row)}</td>
+      <td data-label="MATERIAL"><strong>${esc(row.option.name)}</strong><small>${row.group?.options?.length > 1 ? 'SELECTED RECIPE MATERIAL' : esc(row.option.id)}</small>${alternativeMarkup(row)}</td>
       <td data-label="REQUIRED">${fmt(row.required)}</td>
       <td data-label="POB STOCK">${fmt(row.stock)}</td>
       <td data-label="UNIT PRICE" class="calculator-price">${priceEditorMarkup(row)}</td>
@@ -523,13 +557,12 @@
       </section>
       <section class="calculator-quote" data-calculator-tone="${status.tone}">
         <div class="calculator-section-head"><div><span>02</span><strong>POB COST QUOTE</strong></div><small>${esc(pob.label)} // ${telemetry.mode === 'live' ? 'LIVE' : telemetry.mode === 'cache' ? 'CACHED' : 'NO FEED'}</small></div>
-        <div class="calculator-quote-grid">
+        <div class="calculator-quote-grid" data-cards="${result.fixedFee > 0 ? 3 : 2}">
           <article><small>TOTAL BUILD COST</small><strong>${money(result.totalCost)}</strong><span>${esc(knownLabel)}</span></article>
           <article><small>COST / PRODUCED ITEM</small><strong>${money(result.unitCost)}</strong><span>${fmt(result.actualOutput)} ACTUAL OUTPUT</span></article>
-          <article><small>PRICE COVERAGE</small><strong>${result.rows.length - result.missingPrices} / ${result.rows.length}</strong><span>CONSUMED MATERIALS</span></article>
-          <article><small>FIXED RECIPE FEE</small><strong>${money(result.fixedFee)}</strong><span>${result.fixedFee ? `${money(recipe.creditCost)} × ${fmt(result.cycles)} CYCLES` : 'NO FIXED FEE'}</span></article>
+          ${result.fixedFee > 0 ? `<article><small>RECIPE FEE</small><strong>${money(result.fixedFee)}</strong><span>${money(recipe.creditCost)} PER CYCLE × ${fmt(result.cycles)}</span></article>` : ''}
         </div>
-        <div class="calculator-quote-state" data-tone="${status.tone}"><i></i><strong>${esc(status.label)}</strong></div>
+        <div class="calculator-quote-state" data-tone="${status.tone}"><i></i><strong>${esc(status.label)}</strong><span>${esc(priceCoverageLabel(result))}</span></div>
       </section>
       <section class="calculator-materials">
         <div class="calculator-section-head"><div><span>03</span><strong>CONSUMED MATERIALS</strong></div><small>${esc(materialPriceNote)}</small></div>
@@ -596,7 +629,10 @@
       const recipe = selectedRecipe(matchingRecipes());
       if (!recipe) return;
       const key = `${recipe.id}:${alternative.dataset.calculatorAlternative}`;
-      saveState({ alternatives: { ...state.alternatives, [key]: alternative.value } });
+      const alternatives = { ...state.alternatives };
+      if (alternative.value) alternatives[key] = alternative.value;
+      else delete alternatives[key];
+      saveState({ alternatives });
       render();
     }
   }
