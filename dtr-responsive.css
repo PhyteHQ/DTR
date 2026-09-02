@@ -1,4 +1,4 @@
-/* DTR v0.6.1 responsive and accessibility layer */
+/* DTR v0.6.2 responsive and accessibility layer */
 :root {
   --muted: #958a91;
 }
@@ -74,6 +74,91 @@ input:focus-visible,
   white-space: normal;
   text-align: right;
   line-height: 1.4;
+}
+
+.base-hero-telemetry {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  flex: 0 1 330px;
+  min-width: 280px;
+  gap: 9px;
+}
+
+.hero-health,
+.hero-sync {
+  border: 1px solid rgba(157, 48, 57, 0.22);
+  background: rgba(0, 0, 0, 0.32);
+}
+
+.hero-health {
+  padding: 10px 11px;
+}
+
+.hero-health-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hero-health-head small,
+.hero-sync small {
+  color: var(--gold-soft);
+  font: 0.75rem "Oxanium", sans-serif;
+  letter-spacing: 0.08em;
+}
+
+.hero-health .health-badge {
+  min-width: 72px;
+  padding: 7px 10px;
+  font-size: 0.9rem;
+}
+
+.hero-health .meter {
+  height: 6px;
+  margin-top: 10px;
+}
+
+.hero-health .meter > span[data-tone="warn"] {
+  background: var(--warn);
+}
+
+.hero-health .meter > span[data-tone="danger"] {
+  background: var(--bad);
+}
+
+.hero-health .meter > span[data-tone="muted"] {
+  background: var(--muted);
+}
+
+.hero-sync {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 4px 10px;
+  padding: 9px 11px;
+}
+
+.hero-sync strong {
+  color: var(--text);
+  font: 600 1rem "Oxanium", sans-serif;
+}
+
+.hero-sync span {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+}
+
+.compact-stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.stock-range.is-fixed {
+  justify-content: flex-start;
+  color: var(--gold-soft);
 }
 
 .dtr-uplink-head > span,
@@ -208,6 +293,39 @@ input:focus-visible,
     grid-column: 1 / -1;
   }
 
+  .compact-stats .stat-card:first-child,
+  .compact-stats .stat-card:last-child {
+    grid-column: auto;
+  }
+
+  .base-hero {
+    gap: 14px;
+  }
+
+  .base-hero-telemetry {
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr) minmax(118px, 0.62fr);
+    align-items: stretch;
+  }
+
+  .hero-sync {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 3px;
+  }
+
+  .hero-sync strong {
+    font-size: 0.9rem;
+  }
+
+  .hero-sync span {
+    font-size: 0.72rem;
+    line-height: 1.35;
+  }
+
   .matrix-hint {
     display: inline-flex;
     max-width: 145px;
@@ -292,6 +410,15 @@ input:focus-visible,
     min-width: 52px;
     padding-inline: 7px;
     font-size: 0.7rem;
+  }
+
+  .base-hero-telemetry {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-sync {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 }
 
