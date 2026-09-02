@@ -3,7 +3,7 @@
   'use strict';
   if (window.DTRQuality) return;
 
-  const META = Object.freeze({ version: '0.6.3', build: '2026.09.02-E' });
+  const META = Object.freeze({ version: '0.7.0', build: '2026.09.02-F' });
   const ATTENTION_KEY = 'dtr:attention:v1';
   const runtimeEvents = [];
   const $ = id => document.getElementById(id);
@@ -43,10 +43,13 @@
     if ($('dtrQuickbar')) return;
     const tabs = $('tabs');
     if (!tabs) return;
-    tabs.insertAdjacentHTML('afterend', `<section class="dtr-quickbar" id="dtrQuickbar" aria-label="Command filter">
+    tabs.insertAdjacentHTML('afterend', `<section class="dtr-quickbar" id="dtrQuickbar" aria-label="DTR command controls">
       <div class="dtr-quickbar-inner">
         <button class="dtr-attention-toggle" id="dtrAttentionToggle" type="button" aria-pressed="false" aria-label="Show only issues">
           <span>ATTENTION</span><small>ONLY ISSUES</small><b id="dtrAttentionCount">0</b>
+        </button>
+        <button class="dtr-calculator-launch" id="dtrCalculatorLaunch" type="button" aria-label="Open recipe cost calculator">
+          <span>CALCULATOR</span><small>RECIPE COST</small>
         </button>
         <div class="dtr-quickbar-state"><small>COMMAND FILTER</small><strong id="dtrAttentionSummary">ALL NETWORK DATA</strong></div>
         <span class="dtr-build-chip">v${META.version} // ${META.build}</span>
@@ -56,6 +59,9 @@
       attention = !attention;
       saveAttention();
       applyAttention();
+    });
+    $('dtrCalculatorLaunch')?.addEventListener('click', () => {
+      window.DTRApp?.show?.('calculator');
     });
   }
 
@@ -91,6 +97,13 @@
       if (selected) button.setAttribute('aria-current', 'page');
       else button.removeAttribute('aria-current');
     });
+    const calculator = $('dtrCalculatorLaunch');
+    if (calculator) {
+      const selected = active === 'calculator';
+      calculator.classList.toggle('active', selected);
+      if (selected) calculator.setAttribute('aria-current', 'page');
+      else calculator.removeAttribute('aria-current');
+    }
   }
 
   function globalAlertCount() {
@@ -160,7 +173,7 @@
     const storageReady = window.DTRApp?.storageCheck?.() ?? false;
     const storageFaults = state.storageFaults?.length || 0;
     const recoveries = state.recoveries?.length || 0;
-    const requiredShell = ['tabs', 'overviewView', 'detailView', 'overviewGrid', 'networkMatrix', 'systemPanel']
+    const requiredShell = ['tabs', 'overviewView', 'calculatorView', 'detailView', 'overviewGrid', 'networkMatrix', 'systemPanel']
       .every(id => Boolean($(id)));
     const runtimeReady = Boolean(window.DTRApp) && requiredShell && runtimeEvents.length === 0;
     const matches = [...(state.bases?.values?.() || [])].filter(Boolean).length;
@@ -231,6 +244,15 @@
         matches === 4 ? 'good' : matches ? 'warn' : 'danger',
         `${matches}/4`,
         matches === 4 ? 'All tracked DTR POBs resolve from the current app state.' : 'One or more tracked POBs are missing from the current app state.'
+      ),
+      diagnostic(
+        'recipes',
+        'RECIPE CATALOG',
+        window.DTR_RECIPE_CATALOG?.meta?.recipeCount ? 'good' : 'danger',
+        window.DTR_RECIPE_CATALOG?.meta?.recipeCount ? `${window.DTR_RECIPE_CATALOG.meta.recipeCount} READY` : 'UNAVAILABLE',
+        window.DTR_RECIPE_CATALOG?.meta?.recipeCount
+          ? 'Discovery recipe data is available to the POB cost calculator.'
+          : 'The calculator recipe data did not load.'
       ),
       diagnostic(
         'pwa',

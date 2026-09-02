@@ -1,10 +1,10 @@
 /* DTR POB Network · RHW-style offline app shell.
    App assets are available offline. Darkstat telemetry remains network-only. */
 const CACHE_PREFIX='dtr-pob-network-pwa-';
-const CACHE_NAME=`${CACHE_PREFIX}2026-09-02-v0.6.3`;
+const CACHE_NAME=`${CACHE_PREFIX}2026-09-02-v0.7.0`;
 const APP_SHELL=[
-  './','./index.html','./manifest.webmanifest','./styles.css','./enhancements.css','./dtr-quality.css','./dtr-uplink.css','./dtr-responsive.css',
-  './dtr-pwa.js','./app.js','./dtr-quality.js','./dtr-uplink.js',
+  './','./index.html','./manifest.webmanifest','./styles.css','./enhancements.css','./dtr-quality.css','./dtr-uplink.css','./dtr-responsive.css','./dtr-calculator.css',
+  './dtr-pwa.js','./recipe-catalog.js','./app.js','./dtr-calculator.js','./dtr-quality.js','./dtr-uplink.js',
   './assets/favicon-64.png','./assets/apple-touch-icon.png','./assets/icon-192.png','./assets/icon-512.png','./assets/icon-maskable-512.png'
 ];
 

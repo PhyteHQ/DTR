@@ -22,8 +22,10 @@ jobs:
       - name: Check JavaScript syntax
         shell: bash
         run: |
-          for file in ./*.js ./tests/*.mjs; do
+          for file in ./*.js ./tests/*.mjs ./scripts/*.mjs; do
             node --check "$file"
           done
       - name: Run static quality audit
         run: node tests/static-audit.mjs
+      - name: Run calculator runtime audit
+        run: node tests/calculator-runtime.mjs

@@ -1,6 +1,6 @@
 # DTR POB Network
 
-Mobile-first operational dashboard for the DTR faction's four player-owned bases. It combines Darkstat telemetry, facility maintenance reserves, watched cargo, inventory quotations and offline snapshot support in one installable web app.
+Mobile-first operational dashboard for the DTR faction's four player-owned bases. It combines Darkstat telemetry, facility maintenance reserves, watched cargo, inventory quotations, recipe costing and offline snapshot support in one installable web app.
 
 ## Runtime
 
@@ -21,6 +21,18 @@ Mobile-first operational dashboard for the DTR faction's four player-owned bases
 - POB health and last-sync telemetry live in the detail header, leaving only credits and storage as compact summary cards.
 - Equal API minimum and maximum stock limits are shown once as a required stock value.
 - On wide desktop screens, the command filter aligns with the dashboard shell and overview figures use larger display type.
+- The recipe calculator contains 292 recipes generated from Discovery's public `base_recipe_items.cfg` and `base_recipe_modules.cfg` data.
+- Calculator material prices come from the selected DTR POB's **BASE SELLS** quotation. Unlisted commodities and missing sale prices remain unknown (`—`) and keep the total quote incomplete.
+- Alternative recipe inputs automatically prefer the least expensive priced option at the selected POB and remain manually selectable.
+- Explicitly reported stock shortages are shown separately from price coverage. Catalysts are listed as retained requirements and are not added to consumed-material cost.
+
+## Recipe catalog
+
+Rebuild the generated browser catalog from downloaded Discovery CFG files with:
+
+```sh
+node scripts/build-recipe-catalog.mjs /path/to/base_recipe_items.cfg /path/to/base_recipe_modules.cfg recipe-catalog.js
+```
 
 ## Quality checks
 
