@@ -57,9 +57,7 @@
     location: $('detailLocation'),
     badge: $('detailHealthBadge'),
     detailDelta: $('detailDelta'),
-    health: $('healthValue'),
     meter: $('healthMeter'),
-    healthDelta: $('healthDelta'),
     credits: $('creditsValue'),
     creditsDelta: $('creditsDelta'),
     storage: $('storageValue'),
@@ -424,8 +422,14 @@
     const tone = stockState(item);
     const fill = Math.max(0, Math.min(100, quantity / bounds.max * 100));
     const marker = Math.max(0, Math.min(100, bounds.min / bounds.max * 100));
-    const label = `Quantity ${fmt(quantity)}, minimum ${fmt(bounds.min)}, maximum ${fmt(bounds.max)}`;
-    return `<div class="stock-level${compact ? ' compact' : ''}" data-tone="${tone}" role="img" aria-label="${esc(label)}"><div class="stock-range"><span>MIN ${fmt(bounds.min)}</span><span>MAX ${fmt(bounds.max)}</span></div><div class="stock-track"><i style="width:${fill}%"></i><mark style="left:${marker}%"></mark></div></div>`;
+    const fixedRequirement = bounds.min === bounds.max;
+    const label = fixedRequirement
+      ? `Quantity ${fmt(quantity)}, required stock ${fmt(bounds.min)}`
+      : `Quantity ${fmt(quantity)}, minimum ${fmt(bounds.min)}, maximum ${fmt(bounds.max)}`;
+    const limits = fixedRequirement
+      ? `<div class="stock-range is-fixed"><span>REQUIRED ${fmt(bounds.min)}</span></div>`
+      : `<div class="stock-range"><span>MIN ${fmt(bounds.min)}</span><span>MAX ${fmt(bounds.max)}</span></div>`;
+    return `<div class="stock-level${compact ? ' compact' : ''}" data-tone="${tone}" role="img" aria-label="${esc(label)}">${limits}<div class="stock-track"><i style="width:${fill}%"></i><mark style="left:${marker}%"></mark></div></div>`;
   }
 
   function delta(current, previous) {
@@ -770,11 +774,11 @@
     if (!base) {
       E.badge.dataset.tone = 'danger';
       E.badge.textContent = 'OFFLINE';
-      E.health.textContent = '—';
       E.meter.style.width = '0';
+      E.meter.dataset.tone = 'danger';
       E.credits.textContent = '—';
       E.storage.textContent = '—';
-      [E.healthDelta, E.creditsDelta, E.storageDelta].forEach(element => {
+      [E.creditsDelta, E.storageDelta].forEach(element => {
         element.textContent = 'NO DATA';
       });
       E.detailDelta.textContent = 'NODE NOT FOUND IN CURRENT FEED';
@@ -787,17 +791,14 @@
 
     const health = hp(base);
     const healthState = hpTone(base);
-    const healthChange = delta(health, hp(previousBase));
     const creditChange = delta(creditsRaw(base), creditsRaw(previousBase));
     const storageChange = delta(storageRaw(base), storageRaw(previousBase));
     E.badge.dataset.tone = healthState;
     E.badge.textContent = hpText(base);
-    E.health.textContent = hpText(base);
     E.meter.style.width = `${health ?? 0}%`;
     E.meter.dataset.tone = healthState;
     E.credits.textContent = cash(creditsRaw(base));
     E.storage.textContent = fmt(storageRaw(base));
-    setDelta(E.healthDelta, healthChange, '%');
     setDelta(E.creditsDelta, creditChange);
     setDelta(E.storageDelta, storageChange);
     E.detailDelta.textContent = previousBase ? 'PREVIOUS SNAPSHOT AVAILABLE' : 'NO PREVIOUS SNAPSHOT FOR COMPARISON';

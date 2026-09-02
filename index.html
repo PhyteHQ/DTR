@@ -109,14 +109,18 @@
           <div class="hero-delta" id="detailDelta">NO BASELINE SNAPSHOT</div>
         </div>
         <div class="hero-sigil" aria-hidden="true"></div>
-        <span class="health-badge" id="detailHealthBadge">—</span>
+        <div class="base-hero-telemetry">
+          <div class="hero-health">
+            <div class="hero-health-head"><small>STRUCTURAL INTEGRITY</small><span class="health-badge" id="detailHealthBadge">—</span></div>
+            <div class="meter" aria-hidden="true"><span id="healthMeter"></span></div>
+          </div>
+          <div class="hero-sync"><small>LAST VERIFIED SYNC</small><strong id="syncValue">—</strong><span id="syncMode">—</span></div>
+        </div>
       </div>
 
-      <div class="stat-grid">
-        <article class="stat-card"><span class="card-index">01</span><small>STRUCTURAL INTEGRITY</small><strong id="healthValue">—</strong><span class="delta" id="healthDelta">—</span><div class="meter"><span id="healthMeter"></span></div></article>
-        <article class="stat-card"><span class="card-index">02</span><small>BASE CREDITS</small><strong id="creditsValue">—</strong><span class="delta" id="creditsDelta">—</span></article>
-        <article class="stat-card"><span class="card-index">03</span><small>FREE STORAGE</small><strong id="storageValue">—</strong><span class="delta" id="storageDelta">—</span></article>
-        <article class="stat-card"><span class="card-index">04</span><small>LAST VERIFIED SYNC</small><strong id="syncValue">—</strong><span class="delta" id="syncMode">—</span></article>
+      <div class="stat-grid compact-stats">
+        <article class="stat-card"><span class="card-index">01</span><small>BASE CREDITS</small><strong id="creditsValue">—</strong><span class="delta" id="creditsDelta">—</span></article>
+        <article class="stat-card"><span class="card-index">02</span><small>FREE STORAGE</small><strong id="storageValue">—</strong><span class="delta" id="storageDelta">—</span></article>
       </div>
 
       <div class="detail-columns">

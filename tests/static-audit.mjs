@@ -52,6 +52,10 @@ assert.match(pwa, /primaryAction === "update"[\s\S]*?SKIP_WAITING/, 'update acti
 
 assert.match(app, /value === null \|\| value === undefined \|\| value === ''/, 'missing numeric values must remain unknown');
 assert.match(app, /quantity === null \|\| !bounds\.valid/, 'stock bars must require a quantity and valid API limits');
+assert.match(app, /REQUIRED \$\{fmt\(bounds\.min\)\}/, 'equal stock limits must render as one required value');
+assert.match(html, /class="base-hero-telemetry"/, 'POB health and sync must share the compact hero');
+assert(!html.includes('id="healthValue"'), 'structural integrity must not be duplicated in a stat card');
+assert.match(html, /class="stat-grid compact-stats"[\s\S]*?BASE CREDITS[\s\S]*?FREE STORAGE/, 'compact POB stats must retain credits and storage');
 
 const visibleSources = [html, app, await read('dtr-quality.js'), await read('dtr-uplink.js'), pwa].join('\n');
 const nonEnglishUi = [
@@ -75,8 +79,8 @@ assert.match(qualityCss, /@media \(max-width: 760px\)[\s\S]*?\.dtr-quickbar\s*{[
 assert.match(responsiveCss, /@media \(max-width: 680px\)[\s\S]*?\.transmission-rail\s*{[\s\S]*?display:\s*none/, 'decorative transmission rail must collapse on phones');
 assert.match(responsiveCss, /\.topbar\s*{[\s\S]*?padding:\s*12px 6px 8px/, 'phone header must use compact spacing');
 assert.match(responsiveCss, /orientation:\s*landscape/, 'compact landscape header rules must exist');
-assert.match(quality, /version:\s*'0\.6\.1'/, 'visible build version must match v0.6.1');
-assert.match(sw, /v0\.6\.1/, 'service-worker cache must match v0.6.1');
+assert.match(quality, /version:\s*'0\.6\.2'/, 'visible build version must match v0.6.2');
+assert.match(sw, /v0\.6\.2/, 'service-worker cache must match v0.6.2');
 
 for (const cssPath of localRuntimeRefs.filter(path => path.endsWith('.css'))) {
   const css = await read(cssPath);
