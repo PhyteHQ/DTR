@@ -1,9 +1,9 @@
 /* DTR FORCE UPLINK deck + cleaner overview metrics. */
 #overviewView #metricCreditsDelta,
-#overviewView #metricStorageDelta,
 #overviewView .base-card-stats em,
 #overviewView .base-card-stats>div:nth-child(3){display:none!important}
 #overviewView .base-card-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+#overviewView .network-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
 
 .dtr-uplink-console{
   position:relative;margin:14px 0 16px;padding:16px 18px 14px;
@@ -57,5 +57,6 @@
 }
 
 @media(max-width:640px){
+  #overviewView .network-metrics{grid-template-columns:1fr}
   #overviewView .base-card-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 }

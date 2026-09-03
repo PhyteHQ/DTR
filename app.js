@@ -48,8 +48,6 @@
     metricNodesSub: $('metricNodesSub'),
     metricCredits: $('metricCredits'),
     metricCreditsDelta: $('metricCreditsDelta'),
-    metricStorage: $('metricStorage'),
-    metricStorageDelta: $('metricStorageDelta'),
     metricAlerts: $('metricAlerts'),
     metricAlertsSub: $('metricAlertsSub'),
     matrix: $('networkMatrix'),
@@ -584,8 +582,6 @@
       E.metricNodesSub.textContent = 'NO VERIFIED FEED';
       E.metricCredits.textContent = '—';
       E.metricCreditsDelta.innerHTML = '<span data-tone="muted">NO BASELINE</span>';
-      E.metricStorage.textContent = '—';
-      E.metricStorageDelta.innerHTML = '<span data-tone="muted">NO BASELINE</span>';
       E.metricAlerts.textContent = '—';
       E.metricAlertsSub.textContent = 'AWAITING TELEMETRY';
       E.networkState.dataset.tone = 'muted';
@@ -598,8 +594,6 @@
     const alerts = totalAlerts();
     const credits = totalMetric(creditsRaw);
     const previousCredits = totalMetric(creditsRaw, previousBases);
-    const storage = totalMetric(storageRaw);
-    const previousStorage = totalMetric(storageRaw, previousBases);
 
     E.metricNodes.textContent = `${found}/4`;
     E.metricNodesSub.textContent = mode === 'cache'
@@ -609,8 +603,6 @@
         : `${4 - found} NODE${4 - found === 1 ? '' : 'S'} MISSING`;
     E.metricCredits.textContent = credits === null ? '—' : cash(credits);
     E.metricCreditsDelta.innerHTML = deltaMarkup(delta(credits, previousCredits));
-    E.metricStorage.textContent = storage === null ? '—' : fmt(storage);
-    E.metricStorageDelta.innerHTML = deltaMarkup(delta(storage, previousStorage));
     E.metricAlerts.textContent = String(alerts);
     E.metricAlertsSub.textContent = alerts ? 'ATTENTION REQUIRED' : 'NO ACTIVE ALERTS';
 

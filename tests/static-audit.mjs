@@ -27,6 +27,12 @@ const catalog = catalogContext.window.DTR_RECIPE_CATALOG;
 const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
 assert.equal(new Set(ids).size, ids.length, 'index.html must not contain duplicate IDs');
 assert.match(html, /<html\s+lang="en">/i, 'document language must be English');
+assert(!html.includes('TOTAL FREE STORAGE'), 'network overview must not repeat aggregate free storage');
+assert(!app.includes('metricStorage'), 'removed aggregate storage metric must not leave dead runtime references');
+assert(
+  html.indexOf('id="overviewGrid"') < html.indexOf('class="network-metrics"'),
+  'POB status must appear before secondary network metrics'
+);
 assert.equal(manifest.lang, 'en-GB', 'manifest language must be en-GB');
 assert.equal(manifest.display, 'standalone', 'PWA must use standalone display mode');
 assert(!manifest.display_override?.includes('window-controls-overlay'), 'mobile-first PWA must not prefer window controls overlay');
@@ -128,8 +134,8 @@ assert.match(calculatorCss, /@media \(max-width: 760px\)[\s\S]*?\.calculator-pri
 assert.match(calculatorCss, /@media \(max-width: 760px\)[\s\S]*?\.calculator-table tr\s*{[\s\S]*?display:\s*grid/, 'calculator materials must become mobile cards');
 assert.match(calculatorCss, /\.calculator-quote-grid\[data-cards="3"\]\s*{[\s\S]*?repeat\(3/, 'desktop quote cards must adapt when a real recipe fee exists');
 assert.match(quality, /id="dtrCalculatorLaunch"/, 'mobile header controls must expose the calculator');
-assert.match(quality, /version:\s*'0\.7\.2'/, 'visible build version must match v0.7.2');
-assert.match(sw, /v0\.7\.2/, 'service-worker cache must match v0.7.2');
+assert.match(quality, /version:\s*'0\.7\.3'/, 'visible build version must match v0.7.3');
+assert.match(sw, /v0\.7\.3/, 'service-worker cache must match v0.7.3');
 assert(sw.includes('./recipe-catalog.js'), 'recipe catalog must be available offline');
 assert(sw.includes('./dtr-calculator.js'), 'calculator runtime must be available offline');
 
