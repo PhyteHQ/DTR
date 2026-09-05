@@ -66,8 +66,6 @@
     syncMode: $('syncMode'),
     maintenance: $('maintenanceGrid'),
     facilityState: $('facilityState'),
-    priority: $('priorityList'),
-    priorityCount: $('priorityCount'),
     watchGrid: $('watchGrid'),
     watchCount: $('watchCount'),
     search: $('inventorySearch'),
@@ -725,19 +723,6 @@
     }).join('');
   }
 
-  function renderPriority(definition, base) {
-    const list = baseAlerts(definition, base);
-    E.priorityCount.textContent = `${list.length} ALERT${list.length === 1 ? '' : 'S'}`;
-    E.priorityCount.dataset.tone = list.some(item => item.tone === 'danger')
-      ? 'danger'
-      : list.length
-        ? 'warn'
-        : 'good';
-    E.priority.innerHTML = list.length
-      ? list.map((alert, index) => `<article data-tone="${alert.tone}"><span>0${index + 1}</span><div><strong>${esc(alert.title)}</strong><p>${esc(alert.detail)}</p></div></article>`).join('')
-      : '<div class="priority-empty"><i></i><div><strong>NO ACTIVE ALERTS</strong><span>Facility health and monitored reserves are nominal.</span></div></div>';
-  }
-
   function renderPins(base, pobKey) {
     const list = pinsFor(pobKey);
     E.watchCount.textContent = `${list.length} PINNED`;
@@ -810,7 +795,6 @@
       });
       E.detailDelta.textContent = 'NODE NOT FOUND IN CURRENT FEED';
       renderMaintenance(null);
-      renderPriority(definition, null);
       renderPins(null, key);
       renderItems(null);
       return;
@@ -830,7 +814,6 @@
     setDelta(E.storageDelta, storageChange);
     E.detailDelta.textContent = previousBase ? 'PREVIOUS SNAPSHOT AVAILABLE' : 'NO PREVIOUS SNAPSHOT FOR COMPARISON';
     renderMaintenance(base);
-    renderPriority(definition, base);
     renderPins(base, key);
     renderItems(base);
   }

@@ -1,4 +1,4 @@
-/* Torrelavega production module */
+/* Compact Torrelavega production modules */
 .production-panel {
   margin-top: 14px;
   overflow: hidden;
@@ -7,7 +7,8 @@
   clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
 }
 
-.production-state {
+.production-state,
+.production-card-state {
   padding: 6px 9px;
   border: 1px solid currentColor;
   background: rgba(74, 20, 26, 0.11);
@@ -16,40 +17,47 @@
   white-space: nowrap;
 }
 
-#productionGrid { padding: 12px; }
+#productionGrid {
+  padding: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
 
 .production-card {
   position: relative;
+  min-width: 0;
   overflow: hidden;
   border: 1px solid rgba(157, 48, 57, 0.25);
   background:
-    linear-gradient(115deg, rgba(157, 48, 57, 0.085), transparent 34%),
+    linear-gradient(115deg, rgba(157, 48, 57, 0.075), transparent 32%),
     linear-gradient(180deg, rgba(10, 9, 10, 0.98), rgba(3, 3, 4, 0.98));
   box-shadow: inset 3px 0 0 currentColor;
-  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
 }
 
 .production-card::after {
   content: "";
   position: absolute;
   right: -28px;
-  top: 18px;
-  width: 180px;
+  top: 10px;
+  width: 130px;
   aspect-ratio: 1;
   pointer-events: none;
-  opacity: 0.025;
+  opacity: 0.022;
   background: var(--sigil) center / contain no-repeat;
 }
 
 .production-card > header {
   position: relative;
   z-index: 1;
+  min-height: 72px;
+  padding: 12px 13px;
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 24px;
-  padding: 20px;
-  border-bottom: 1px solid rgba(157, 48, 57, 0.15);
+  gap: 10px;
+  border-bottom: 1px solid rgba(157, 48, 57, 0.14);
 }
 
 .production-card > header small,
@@ -57,53 +65,53 @@
 .production-materials small,
 .production-card > footer small {
   color: var(--muted);
-  font: 0.66rem "Oxanium", sans-serif;
-  letter-spacing: 0.08em;
+  font: 0.62rem "Oxanium", sans-serif;
+  letter-spacing: 0.065em;
 }
 
 .production-card h4 {
-  margin: 5px 0 0;
+  margin: 4px 0 0;
   color: var(--gold);
-  font: 600 clamp(1.65rem, 4vw, 2.5rem) "Oxanium", sans-serif;
-  letter-spacing: -0.025em;
+  font: 600 clamp(1.25rem, 2.8vw, 1.65rem) "Oxanium", sans-serif;
+  letter-spacing: -0.02em;
 }
 
-.production-card header p {
-  margin: 8px 0 0;
-  color: var(--gold-soft);
-  font: 0.72rem "Oxanium", sans-serif;
-  letter-spacing: 0.08em;
-}
-
-.production-card header p strong { color: var(--text); }
-
-.production-actions {
+.production-command {
+  position: relative;
+  z-index: 1;
+  padding: 9px 11px;
   display: grid;
-  justify-items: end;
-  gap: 9px;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(157, 48, 57, 0.12);
 }
 
-.production-actions span {
-  color: var(--good);
-  font: 700 0.66rem "Oxanium", sans-serif;
-  letter-spacing: 0.07em;
+.production-command p {
+  margin: 0;
+  color: var(--gold-soft);
+  font: 0.68rem "Oxanium", sans-serif;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
 }
 
-.production-actions button {
-  min-width: 190px;
-  min-height: 48px;
-  padding: 0 18px;
+.production-command p strong { color: var(--text); font-size: 0.88rem; }
+.production-command > span { color: var(--good); font: 700 0.61rem "Oxanium", sans-serif; letter-spacing: 0.05em; text-align: right; }
+
+.production-command button {
+  min-height: 42px;
+  padding: 0 12px;
   border: 1px solid rgba(200, 174, 130, 0.5);
   background: linear-gradient(90deg, rgba(200, 174, 130, 0.11), rgba(157, 48, 57, 0.07));
   color: var(--gold);
-  font: 700 0.76rem "Oxanium", sans-serif;
-  letter-spacing: 0.075em;
+  font: 700 0.68rem "Oxanium", sans-serif;
+  letter-spacing: 0.055em;
   cursor: pointer;
-  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  clip-path: polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px);
 }
 
-.production-actions button:hover,
-.production-actions button:focus-visible {
+.production-command button:hover,
+.production-command button:focus-visible {
   outline: none;
   border-color: var(--gold);
   background: rgba(200, 174, 130, 0.14);
@@ -112,118 +120,109 @@
 .production-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  border-bottom: 1px solid rgba(157, 48, 57, 0.14);
+  border-bottom: 1px solid rgba(157, 48, 57, 0.12);
 }
 
 .production-metrics > div {
-  min-height: 112px;
-  padding: 17px 20px;
-  border-right: 1px solid rgba(157, 48, 57, 0.12);
+  min-width: 0;
+  min-height: 70px;
+  padding: 10px 11px;
+  border-right: 1px solid rgba(157, 48, 57, 0.1);
 }
 
 .production-metrics > div:last-child { border-right: 0; }
 
 .production-metrics strong {
   display: block;
-  margin-top: 10px;
+  margin-top: 6px;
+  overflow: hidden;
   color: var(--text);
-  font: 600 clamp(1.6rem, 4vw, 2.25rem) "Oxanium", sans-serif;
-}
-
-.production-metrics span {
-  display: block;
-  margin-top: 4px;
-  color: var(--gold-soft);
-  font-size: 0.68rem;
-  letter-spacing: 0.05em;
+  font: 600 clamp(1.12rem, 2.7vw, 1.45rem) "Oxanium", sans-serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .production-next {
-  margin: 14px;
-  padding: 13px 15px;
+  margin: 8px;
+  padding: 9px 10px;
   border: 1px dashed currentColor;
   background: rgba(255, 255, 255, 0.012);
-  font: 700 0.75rem "Oxanium", sans-serif;
-  letter-spacing: 0.07em;
+  font: 700 0.67rem/1.4 "Oxanium", sans-serif;
+  letter-spacing: 0.05em;
 }
 
 .production-materials {
-  margin: 0 14px 14px;
-  border: 1px solid rgba(157, 48, 57, 0.17);
-  background: rgba(0, 0, 0, 0.24);
+  margin: 0 8px 8px;
+  border: 1px solid rgba(157, 48, 57, 0.16);
+  background: rgba(0, 0, 0, 0.23);
 }
 
-.production-materials summary {
-  min-height: 46px;
-  padding: 0 14px;
+.production-materials-head {
+  min-height: 34px;
+  padding: 7px 9px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  color: var(--rose);
-  font: 700 0.69rem "Oxanium", sans-serif;
-  letter-spacing: 0.075em;
-  cursor: pointer;
-  list-style-position: inside;
+  gap: 8px;
+  border-bottom: 1px solid rgba(157, 48, 57, 0.13);
 }
 
-.production-materials summary span { color: var(--muted); font-size: 0.61rem; }
-.production-materials[open] summary { border-bottom: 1px solid rgba(157, 48, 57, 0.14); }
+.production-materials-head strong { color: var(--rose); font: 700 0.67rem "Oxanium", sans-serif; letter-spacing: 0.07em; }
+.production-materials-head span { color: var(--muted); font: 0.58rem "Oxanium", sans-serif; letter-spacing: 0.05em; }
 .production-materials ul { margin: 0; padding: 0; list-style: none; }
 
 .production-materials li {
+  min-height: 56px;
+  padding: 8px 9px;
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) 130px 130px 120px;
+  grid-template-columns: minmax(0, 1fr) 78px 88px;
   align-items: center;
-  gap: 12px;
-  min-height: 70px;
-  padding: 12px 14px;
-  border-bottom: 1px solid rgba(157, 48, 57, 0.1);
+  gap: 8px;
+  border-bottom: 1px solid rgba(157, 48, 57, 0.09);
 }
 
 .production-materials li:last-child { border-bottom: 0; }
-.production-materials li > div strong { display: block; margin-top: 4px; color: var(--gold); font: 600 0.92rem "Oxanium", sans-serif; }
-.production-materials li > span { display: grid; gap: 4px; }
-.production-materials li > span b { color: var(--text); font: 600 0.9rem "Oxanium", sans-serif; }
-.production-materials li > em { color: inherit; font: 700 0.65rem "Oxanium", sans-serif; font-style: normal; text-align: right; }
+.production-materials li > div { min-width: 0; }
+.production-materials li > div strong { display: block; margin-top: 2px; overflow: hidden; color: var(--gold); font: 600 0.84rem "Oxanium", sans-serif; text-overflow: ellipsis; white-space: nowrap; }
+.production-materials li > div em { display: block; margin-top: 3px; color: inherit; font: 700 0.58rem "Oxanium", sans-serif; font-style: normal; }
+.production-materials li > span { min-width: 0; display: grid; gap: 3px; text-align: right; }
+.production-materials li > span b { overflow: hidden; color: var(--text); font: 600 0.82rem "Oxanium", sans-serif; text-overflow: ellipsis; white-space: nowrap; }
 
 .production-card > footer {
+  padding: 9px 11px 12px;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 24px;
-  padding: 14px 20px 18px;
-  border-top: 1px solid rgba(157, 48, 57, 0.12);
+  gap: 7px 18px;
+  border-top: 1px solid rgba(157, 48, 57, 0.1);
 }
 
-.production-card > footer span { display: grid; gap: 4px; }
-.production-card > footer b { color: var(--gold-soft); font: 600 0.72rem "Oxanium", sans-serif; }
-.production-empty { padding: 24px; text-align: center; font: 0.75rem "Oxanium", sans-serif; }
+.production-card > footer span { display: grid; gap: 3px; }
+.production-card > footer b { color: var(--gold-soft); font: 600 0.65rem "Oxanium", sans-serif; }
+.production-empty { grid-column: 1 / -1; padding: 20px; text-align: center; font: 0.75rem "Oxanium", sans-serif; }
+
+@media (max-width: 980px) {
+  #productionGrid { grid-template-columns: 1fr; }
+}
 
 @media (max-width: 760px) {
-  #productionGrid { padding: 8px; }
-  .production-card > header { align-items: stretch; flex-direction: column; gap: 15px; padding: 16px; }
-  .production-card h4 { font-size: 1.75rem; }
-  .production-actions { justify-items: stretch; }
-  .production-actions button { width: 100%; min-width: 0; min-height: 52px; }
-  .production-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .production-metrics > div { min-height: 98px; padding: 13px 10px; }
-  .production-metrics strong { font-size: 1.35rem; }
-  .production-metrics span { overflow: hidden; font-size: 0.58rem; text-overflow: ellipsis; white-space: nowrap; }
-  .production-next { margin: 10px; padding: 12px; font-size: 0.69rem; line-height: 1.45; }
-  .production-materials { margin: 0 10px 10px; }
-  .production-materials summary { min-height: 50px; padding: 0 11px; }
-  .production-materials li {
-    grid-template-columns: 1fr 1fr;
-    gap: 12px 9px;
-    padding: 13px 11px;
-  }
-  .production-materials li > div { grid-column: 1 / -1; }
-  .production-materials li > em { grid-column: 1 / -1; text-align: left; }
-  .production-card > footer { display: grid; padding: 13px 16px 17px; }
+  #productionGrid { padding: 7px; gap: 7px; }
+  .production-card > header { min-height: 64px; padding: 10px 11px; }
+  .production-card h4 { font-size: 1.25rem; }
+  .production-card-state { padding: 5px 7px; font-size: 0.61rem; }
+  .production-command { grid-template-columns: minmax(0, 1fr) auto; padding: 8px 9px; }
+  .production-command > span { grid-column: 1 / -1; grid-row: 2; text-align: left; }
+  .production-command button { min-height: 44px; padding-inline: 10px; }
+  .production-metrics > div { min-height: 64px; padding: 9px; }
+  .production-metrics strong { font-size: 1.12rem; }
+  .production-next { margin: 7px; padding: 8px 9px; }
+  .production-materials { margin: 0 7px 7px; }
+  .production-materials li { grid-template-columns: minmax(0, 1fr) 70px 80px; gap: 6px; padding: 8px; }
+  .production-materials li > div strong { font-size: 0.8rem; }
+  .production-materials li > span b { font-size: 0.76rem; }
+  .production-card > footer { display: grid; padding: 8px 10px 11px; }
 }
 
-@media (max-width: 390px) {
-  .production-metrics { grid-template-columns: 1fr; }
-  .production-metrics > div { min-height: 80px; border-right: 0; border-bottom: 1px solid rgba(157, 48, 57, 0.12); }
-  .production-metrics > div:last-child { border-bottom: 0; }
+@media (max-width: 370px) {
+  .production-materials-head span { display: none; }
+  .production-materials li { grid-template-columns: minmax(0, 1fr) 62px 70px; }
 }

@@ -20,7 +20,7 @@ Mobile-first operational dashboard for the DTR faction's four player-owned bases
 - On phones, decorative header layers collapse so live POB content begins substantially higher on the first screen.
 - POB health and last-sync telemetry live in the detail header, leaving only credits and storage as compact summary cards.
 - Every POB has its own pinned-cargo list. Existing global watchlist entries are migrated to all four POBs once, then remain independently editable per base.
-- Fort Torrelavega includes a live advanced Wildcat Gold production module. It applies the Corsair 0.85× material factor, selects the alternative fuel that supports the most cycles, identifies the next-cycle bottleneck and opens the calculator with the same recipe, POB and fuel selection.
+- Fort Torrelavega includes compact, always-expanded production modules for advanced Wildcat Gold refining and the advanced Scrap Smelter recipe for Basic Alloy. Both use their fixed facility materials, calculate live capacity and the next-cycle bottleneck, and open the calculator with the same recipe, POB and material selection. The Gold module applies the Corsair 0.85× material factor; Scrap Smelting uses its standard recipe quantities.
 - Equal API minimum and maximum stock limits are shown once as a required stock value.
 - On wide desktop screens, the command filter aligns with the dashboard shell and overview figures use larger display type.
 - Currency values use Discovery's `$` notation throughout the dashboard and calculator.

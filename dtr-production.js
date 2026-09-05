@@ -1,10 +1,27 @@
-/* DTR Torrelavega production module · live stock against the advanced Wildcat Gold recipe. */
+/* DTR Torrelavega production modules · live stock against fixed facility recipes. */
 (() => {
   'use strict';
 
-  const RECIPE_ID = 'recipe_gold_advanced';
   const POB_KEY = 'fort-torrelavega';
   const DTR_AFFILIATION = 'fc_c_grp';
+  const MODULES = Object.freeze([
+    Object.freeze({
+      recipeId: 'recipe_gold_advanced',
+      code: 'MODULE-04',
+      process: 'ADVANCED GOLD REFINING',
+      preferredAlternatives: Object.freeze({ 2: 'commodity_mox_fuel' })
+    }),
+    Object.freeze({
+      recipeId: 'recipe_scrap_advanced',
+      code: 'MODULE-05',
+      process: 'SCRAP SMELTER',
+      preferredAlternatives: Object.freeze({
+        1: 'commodity_mox_fuel',
+        2: 'commodity_scrap_metal'
+      })
+    })
+  ]);
+  const RECIPE_IDS = Object.freeze(MODULES.map(module => module.recipeId));
   const LOCALE = 'en-GB';
   const numberFormat = new Intl.NumberFormat(LOCALE);
   let panel = null;
@@ -130,17 +147,22 @@
     return ranked[0] || null;
   }
 
-  function createSnapshot(recipe, base) {
+  function selectedOption(base, group, factor, preferredId) {
+    const preferred = (group?.options || []).find(option => option.id === preferredId);
+    return preferred
+      ? optionSnapshot(base, preferred, factor)
+      : bestCapacityOption(base, group?.options || [], factor);
+  }
+
+  function createSnapshot(recipe, base, preferredAlternatives = {}) {
     if (!recipe) return null;
     const factor = affiliationFactor(recipe);
     const output = effectiveOutput(recipe);
     const rows = (recipe.inputs || []).map((group, index) => {
-      const selected = bestCapacityOption(base, group.options || [], factor);
+      const selected = selectedOption(base, group, factor, preferredAlternatives[index]);
       return selected ? { ...selected, group, index } : null;
     }).filter(Boolean);
-    const cycles = rows.length
-      ? Math.min(...rows.map(row => row.capacity))
-      : 0;
+    const cycles = rows.length ? Math.min(...rows.map(row => row.capacity)) : 0;
     const targetCycles = cycles + 1;
     const nextRows = rows.map(row => ({
       ...row,
@@ -179,16 +201,18 @@
 
   function materialRows(snapshot) {
     return snapshot.rows.map((row, index) => {
-      const available = row.stock === null
+      const tone = row.stock === null || row.stock < row.required
+        ? 'danger'
+        : row.capacity < 10 ? 'warn' : 'good';
+      const availability = row.stock === null
         ? row.item ? 'STOCK UNKNOWN' : 'NOT LISTED'
         : row.stock < row.required
           ? `SHORT ${fmt(row.required - row.stock)}`
           : `${fmt(row.capacity)} CYCLES`;
-      return `<li data-tone="${row.stock === null || row.stock < row.required ? 'danger' : row.capacity < 10 ? 'warn' : 'good'}">
-        <div><small>INPUT 0${index + 1}${row.group.options.length > 1 ? ' // AUTO CAPACITY' : ''}</small><strong>${esc(row.option.name)}</strong></div>
+      return `<li data-tone="${tone}">
+        <div><small>INPUT 0${index + 1}</small><strong>${esc(row.option.name)}</strong><em>${esc(availability)}</em></div>
         <span><small>REQ / CYCLE</small><b>${fmt(row.required)}</b></span>
         <span><small>ON HAND</small><b>${fmt(row.stock)}</b></span>
-        <em>${esc(available)}</em>
       </li>`;
     }).join('');
   }
@@ -198,53 +222,41 @@
     return `<span><small>${label}</small><b>${entries.map(entry => `${fmt(entry.qty)} ${esc(entry.name)}`).join(' + ')}${suffix}</b></span>`;
   }
 
-  function render() {
-    if (!panel || !grid || !status) return;
-    const appState = window.DTRApp?.getState?.();
-    const active = appState?.view === POB_KEY;
-    panel.hidden = !active;
-    if (!active) return;
+  function cardStatus(snapshot, base) {
+    if (!base) return 'NO POB FEED';
+    if (snapshot.cycles === 0) return 'NO CYCLES';
+    return snapshot.cycles < 10 ? 'LOW CAPACITY' : 'STABLE';
+  }
 
-    const recipe = window.DTR_RECIPE_CATALOG?.recipes?.find(entry => entry.id === RECIPE_ID);
-    if (!recipe) {
-      status.dataset.tone = 'danger';
-      status.textContent = 'RECIPE UNAVAILABLE';
-      grid.innerHTML = '<div class="production-empty" data-tone="danger">ADVANCED WILDCAT GOLD RECIPE NOT FOUND.</div>';
-      return;
-    }
-
-    const base = appState?.bases?.get?.(POB_KEY) || null;
-    const snapshot = createSnapshot(recipe, base);
-    const statusText = !base
-      ? 'NO POB FEED'
-      : snapshot.cycles === 0
-        ? 'ACTION REQUIRED'
-        : snapshot.cycles < 10
-          ? 'LOW CAPACITY'
-          : 'PRODUCTION READY';
-    status.dataset.tone = snapshot.tone;
-    status.textContent = statusText;
-    const desktopOpen = window.matchMedia?.('(min-width: 761px)')?.matches ? ' open' : '';
+  function renderCard(module, snapshot, base) {
     const nextCycle = snapshot.bottleneck
       ? `NEXT +1 CYCLE // ${esc(snapshot.bottleneck.option.name)} +${fmt(snapshot.bottleneck.gap)}`
       : 'NEXT CYCLE // MATERIAL STATUS UNAVAILABLE';
     const efficiency = Math.round((1 - snapshot.factor) * 100);
+    const efficiencyLabel = efficiency > 0
+      ? `CORSAIR −${efficiency}% MATERIALS`
+      : 'STANDARD MATERIAL LOAD';
 
-    grid.innerHTML = `<article class="production-card" data-tone="${snapshot.tone}">
+    return `<article class="production-card" data-tone="${snapshot.tone}">
       <header>
-        <div><small>MODULE-04 // ADVANCED REFINING</small><h4>${esc(snapshot.output?.name || 'Wildcat Gold')}</h4><p>YIELD PER CYCLE // <strong>${fmt(snapshot.outputPerCycle)}</strong></p></div>
-        <div class="production-actions"><span>${efficiency > 0 ? `CORSAIR −${efficiency}% MATERIALS` : 'STANDARD MATERIAL LOAD'}</span><button type="button" data-production-calculate>COST / CALCULATE</button></div>
+        <div><small>${esc(module.code)} // ${esc(module.process)}</small><h4>${esc(snapshot.output?.name || 'PRODUCTION OUTPUT')}</h4></div>
+        <span class="production-card-state" data-tone="${snapshot.tone}">${cardStatus(snapshot, base)}</span>
       </header>
+      <div class="production-command">
+        <p>YIELD / CYCLE <strong>${fmt(snapshot.outputPerCycle)}</strong></p>
+        <span>${efficiencyLabel}</span>
+        <button type="button" data-production-calculate="${esc(module.recipeId)}">COST / CALCULATE</button>
+      </div>
       <div class="production-metrics">
         <div><small>MAX CYCLES</small><strong>${base ? fmt(snapshot.cycles) : '—'}</strong></div>
-        <div><small>IN STOCK</small><strong>${fmt(snapshot.outputStock)}</strong><span>${esc(snapshot.output?.name || 'OUTPUT')}</span></div>
+        <div><small>IN STOCK</small><strong>${fmt(snapshot.outputStock)}</strong></div>
         <div><small>EST. YIELD</small><strong>${base ? fmt(snapshot.estimatedOutput) : '—'}</strong></div>
       </div>
       <div class="production-next" data-tone="${snapshot.tone}">${nextCycle}</div>
-      <details class="production-materials"${desktopOpen}>
-        <summary>SHOW / HIDE MATERIALS <span>${snapshot.rows.length} CONSUMED INPUTS</span></summary>
+      <div class="production-materials">
+        <div class="production-materials-head"><strong>MATERIALS</strong><span>REQUIRED // AVAILABLE</span></div>
         <ul>${materialRows(snapshot)}</ul>
-      </details>
+      </div>
       <footer>
         ${supportLine('CATALYST // RETAINED', snapshot.catalysts, ' // NOT CONSUMED')}
         ${supportLine('BYPRODUCT / CYCLE', snapshot.byproducts)}
@@ -252,14 +264,50 @@
     </article>`;
   }
 
-  function openCalculator() {
+  function render() {
+    if (!panel || !grid || !status) return;
     const appState = window.DTRApp?.getState?.();
-    const recipe = window.DTR_RECIPE_CATALOG?.recipes?.find(entry => entry.id === RECIPE_ID);
-    const snapshot = createSnapshot(recipe, appState?.bases?.get?.(POB_KEY) || null);
-    if (!snapshot) return;
+    const active = appState?.view === POB_KEY;
+    panel.hidden = !active;
+    if (!active) return;
+
+    const catalog = window.DTR_RECIPE_CATALOG?.recipes || [];
+    const base = appState?.bases?.get?.(POB_KEY) || null;
+    const resolved = MODULES.map(module => {
+      const recipe = catalog.find(entry => entry.id === module.recipeId);
+      return recipe ? { module, snapshot: createSnapshot(recipe, base, module.preferredAlternatives) } : null;
+    }).filter(Boolean);
+
+    if (resolved.length !== MODULES.length) {
+      status.dataset.tone = 'danger';
+      status.textContent = 'RECIPE UNAVAILABLE';
+    } else {
+      status.dataset.tone = !base
+        ? 'danger'
+        : resolved.some(entry => entry.snapshot.tone === 'danger')
+          ? 'danger'
+          : resolved.some(entry => entry.snapshot.tone === 'warn') ? 'warn' : 'good';
+      status.textContent = !base ? 'NO POB FEED' : `${resolved.length} MODULES`;
+    }
+
+    grid.innerHTML = resolved.length
+      ? resolved.map(entry => renderCard(entry.module, entry.snapshot, base)).join('')
+      : '<div class="production-empty" data-tone="danger">PRODUCTION RECIPES NOT FOUND.</div>';
+  }
+
+  function openCalculator(recipeId) {
+    const module = MODULES.find(entry => entry.recipeId === recipeId);
+    const recipe = window.DTR_RECIPE_CATALOG?.recipes?.find(entry => entry.id === recipeId);
+    const appState = window.DTRApp?.getState?.();
+    const snapshot = createSnapshot(
+      recipe,
+      appState?.bases?.get?.(POB_KEY) || null,
+      module?.preferredAlternatives
+    );
+    if (!module || !snapshot) return;
     if (window.DTRCalculator?.openRecipe) {
       window.DTRCalculator.openRecipe({
-        recipeId: RECIPE_ID,
+        recipeId,
         pobKey: POB_KEY,
         quantity: Math.max(1, snapshot.outputPerCycle),
         alternatives: snapshot.alternatives
@@ -275,13 +323,14 @@
     status = document.getElementById('productionState');
     if (!panel || !grid || !status) return;
     panel.addEventListener('click', event => {
-      if (event.target.closest('[data-production-calculate]')) openCalculator();
+      const button = event.target.closest('[data-production-calculate]');
+      if (button) openCalculator(button.dataset.productionCalculate);
     });
     render();
   }
 
   window.DTRProduction = Object.freeze({
-    RECIPE_ID,
+    RECIPE_IDS,
     POB_KEY,
     createSnapshot,
     render

@@ -78,6 +78,8 @@ assert(html.indexOf('dtr-calculator.js') < html.indexOf('dtr-production.js'), 'c
 assert.match(html, /id="productionPanel"[^>]+hidden/, 'Torrelavega production panel must be opt-in by POB view');
 assert.match(html, /POB PRIORITY STOCK[\s\S]*?Pinned Cargo/, 'POB detail must expose its dedicated pinned-stock area');
 assert(!html.includes('>WATCHED<'), 'visible inventory controls must use the clearer pinned terminology');
+assert(!html.includes('ATTENTION REQUIRED'), 'individual POB pages must not repeat the network-wide attention panel');
+assert(!app.includes('renderPriority'), 'removed per-POB attention panel must not leave dead runtime rendering');
 
 assert.equal(catalog?.meta?.recipeCount, 292, 'Discovery catalog must contain all 292 supplied recipes');
 assert.equal(catalog?.recipes?.length, 292, 'catalog metadata and recipe payload must agree');
@@ -115,11 +117,16 @@ assert.match(app, /pins:\s*'dtr:pob-pins:v2'/, 'POB pins must use the scoped v2 
 assert.match(app, /POBS\.map\(pob => \[pob\.key, legacy\.map/, 'legacy global pins must migrate without data loss');
 assert.match(app, /pinsFor\(definition\.key\)/, 'reserve alerts must use only the current POB pin set');
 assert.match(app, /renderPins\(base, key\)/, 'detail cards must render the selected POB pin set');
-assert.match(production, /RECIPE_ID = 'recipe_gold_advanced'/, 'Torrelavega module must use the advanced Wildcat Gold recipe');
+assert.match(production, /recipeId: 'recipe_gold_advanced'/, 'Torrelavega must use the advanced Wildcat Gold recipe');
+assert.match(production, /recipeId: 'recipe_scrap_advanced'/, 'Torrelavega must expose its advanced Scrap Smelter recipe');
+assert.match(production, /2: 'commodity_mox_fuel'/, 'Gold production must keep the RHW facility MOX selection');
+assert.match(production, /2: 'commodity_scrap_metal'/, 'Scrap Smelter must keep the RHW facility Scrap Metal selection');
 assert.match(production, /DTR_AFFILIATION = 'fc_c_grp'/, 'production material logic must use the DTR Corsair affiliation');
 assert.match(production, /adjustedPerCycle\(option\?\.qty, factor\)/, 'production material quantities must apply the Corsair factor');
 assert.match(production, /bestCapacityOption/, 'alternative production inputs must select for available cycle capacity');
 assert.match(production, /DTRCalculator\.openRecipe/, 'production cost action must open a preselected calculator quote');
+assert.match(production, /class="production-materials"/, 'production cards must show their material list immediately');
+assert(!production.includes('<details'), 'production material lists must not be collapsed behind disclosure controls');
 
 const visibleSources = [html, app, calculator, production, quality, await read('dtr-uplink.js'), pwa].join('\n');
 const nonEnglishUi = [
@@ -151,11 +158,11 @@ assert.match(calculatorCss, /\.calculator-price-editor input\s*{[\s\S]*?min-heig
 assert.match(calculatorCss, /@media \(max-width: 760px\)[\s\S]*?\.calculator-price-editor > button\s*{[\s\S]*?min-height:\s*44px/, 'manual-price reset must remain touch friendly on phones');
 assert.match(calculatorCss, /@media \(max-width: 760px\)[\s\S]*?\.calculator-table tr\s*{[\s\S]*?display:\s*grid/, 'calculator materials must become mobile cards');
 assert.match(calculatorCss, /\.calculator-quote-grid\[data-cards="3"\]\s*{[\s\S]*?repeat\(3/, 'desktop quote cards must adapt when a real recipe fee exists');
-assert.match(productionCss, /@media \(max-width: 760px\)[\s\S]*?\.production-actions button\s*\{[\s\S]*?min-height:\s*52px/, 'production calculator action must remain touch friendly on phones');
+assert.match(productionCss, /@media \(max-width: 760px\)[\s\S]*?\.production-command button\s*\{[\s\S]*?min-height:\s*44px/, 'production calculator action must remain touch friendly on phones');
 assert.match(productionCss, /\.production-materials li\s*\{[\s\S]*?grid-template-columns:/, 'production inputs must keep a structured desktop layout');
 assert.match(quality, /id="dtrCalculatorLaunch"/, 'mobile header controls must expose the calculator');
-assert.match(quality, /version:\s*'0\.7\.4'/, 'visible build version must match v0.7.4');
-assert.match(sw, /v0\.7\.4/, 'service-worker cache must match v0.7.4');
+assert.match(quality, /version:\s*'0\.7\.5'/, 'visible build version must match v0.7.5');
+assert.match(sw, /v0\.7\.5/, 'service-worker cache must match v0.7.5');
 assert(sw.includes('./recipe-catalog.js'), 'recipe catalog must be available offline');
 assert(sw.includes('./dtr-calculator.js'), 'calculator runtime must be available offline');
 assert(sw.includes('./dtr-production.js'), 'production runtime must be available offline');
