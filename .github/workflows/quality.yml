@@ -29,3 +29,5 @@ jobs:
         run: node tests/static-audit.mjs
       - name: Run calculator runtime audit
         run: node tests/calculator-runtime.mjs
+      - name: Run production runtime audit
+        run: node tests/production-runtime.mjs
