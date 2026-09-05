@@ -1,12 +1,12 @@
 # DTR POB Network
 
-Mobile-first operational dashboard for the DTR faction's four player-owned bases. It combines Darkstat telemetry, facility maintenance reserves, watched cargo, inventory quotations, recipe costing and offline snapshot support in one installable web app.
+Mobile-first operational dashboard for the DTR faction's four player-owned bases. It combines Darkstat telemetry, facility maintenance reserves, POB-specific pinned cargo, inventory quotations, recipe costing, production capacity and offline snapshot support in one installable web app.
 
 ## Runtime
 
 - Static HTML, CSS and JavaScript; no build step is required.
 - Live POB data is requested from the Darkstat API.
-- The latest verified response, previous snapshot, selected view and watchlist are stored locally on the device.
+- The latest verified response, previous snapshot, selected view and per-POB pin lists are stored locally on the device.
 - A service worker caches the application shell. Telemetry itself remains network-only.
 
 ## Behaviour
@@ -19,6 +19,8 @@ Mobile-first operational dashboard for the DTR faction's four player-owned bases
 - The desktop tab strip and the larger fixed mobile navigation operate on the same view state.
 - On phones, decorative header layers collapse so live POB content begins substantially higher on the first screen.
 - POB health and last-sync telemetry live in the detail header, leaving only credits and storage as compact summary cards.
+- Every POB has its own pinned-cargo list. Existing global watchlist entries are migrated to all four POBs once, then remain independently editable per base.
+- Fort Torrelavega includes a live advanced Wildcat Gold production module. It applies the Corsair 0.85× material factor, selects the alternative fuel that supports the most cycles, identifies the next-cycle bottleneck and opens the calculator with the same recipe, POB and fuel selection.
 - Equal API minimum and maximum stock limits are shown once as a required stock value.
 - On wide desktop screens, the command filter aligns with the dashboard shell and overview figures use larger display type.
 - Currency values use Discovery's `$` notation throughout the dashboard and calculator.

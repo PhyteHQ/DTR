@@ -31,6 +31,7 @@ function calculatorRuntime(recipeId, shopItems, quantity = 1, priceOverrides = {
     priceOverrides
   })]]);
   const listeners = {};
+  const shownViews = [];
   const calculatorRoot = {
     innerHTML: '',
     addEventListener(type, listener) { listeners[type] = listener; }
@@ -66,7 +67,7 @@ function calculatorRuntime(recipeId, shopItems, quantity = 1, priceOverrides = {
             view: 'calculator'
           };
         },
-        show() {}
+        show(view) { shownViews.push(view); }
       },
       addEventListener() {}
     }
@@ -74,8 +75,10 @@ function calculatorRuntime(recipeId, shopItems, quantity = 1, priceOverrides = {
   runInNewContext(calculatorSource, sandbox);
   return {
     get html() { return calculatorRoot.innerHTML; },
+    api: sandbox.window.DTRCalculator,
     listeners,
-    storage
+    storage,
+    shownViews
   };
 }
 
@@ -226,6 +229,20 @@ assert(goldHtml.includes('AUTO · MOX · POB $50 · STOCK 19,340'), 'MOX chooser
 assert(goldHtml.includes('ALL 3 MATERIALS PRICED'), 'alternative material groups must count once in pricing completeness');
 assert(goldHtml.includes('QUOTE READY // 1 STOCK SHORTAGE'), 'pricing completeness must remain separate from stock shortages');
 assert(!goldHtml.includes('RECIPE FEE'), 'advanced Wildcat Gold must not show a zero recipe-fee card');
+
+const productionBridge = calculatorRuntime(coreUpgrade.id, goldInventory);
+assert.equal(productionBridge.api.openRecipe({
+  recipeId: goldAdvanced.id,
+  pobKey: 'fort-torrelavega',
+  quantity: 800,
+  alternatives: { 2: 'commodity_gallic_fuel' }
+}), true, 'production bridge must accept a valid recipe preset');
+const bridgedState = JSON.parse(productionBridge.storage.get('dtr:calculator:v1'));
+assert.equal(bridgedState.recipeId, goldAdvanced.id, 'production bridge must select the requested recipe');
+assert.equal(bridgedState.pobKey, 'fort-torrelavega', 'production bridge must select the requested POB');
+assert.equal(bridgedState.quantity, 800, 'production bridge must request one full output cycle');
+assert.equal(bridgedState.alternatives[`${goldAdvanced.id}:2`], 'commodity_gallic_fuel', 'production bridge must preserve its fuel selection');
+assert.deepEqual(productionBridge.shownViews, ['calculator'], 'production bridge must navigate to the calculator once');
 
 const fuelGroupIndex = goldAdvanced.inputs.findIndex(group => group.options.some(option => option.id === 'commodity_mox_fuel'));
 const goldChoiceRuntime = calculatorRuntime(goldAdvanced.id, goldInventory);

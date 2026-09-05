@@ -6,15 +6,17 @@ import { runInNewContext } from 'node:vm';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = path => readFile(join(root, path), 'utf8');
-const [html, manifestRaw, sw, qualityCss, responsiveCss, calculatorCss, app, calculator, catalogSource, pwa, quality] = await Promise.all([
+const [html, manifestRaw, sw, qualityCss, responsiveCss, calculatorCss, productionCss, app, calculator, production, catalogSource, pwa, quality] = await Promise.all([
   read('index.html'),
   read('manifest.webmanifest'),
   read('sw.js'),
   read('dtr-quality.css'),
   read('dtr-responsive.css'),
   read('dtr-calculator.css'),
+  read('dtr-production.css'),
   read('app.js'),
   read('dtr-calculator.js'),
+  read('dtr-production.js'),
   read('recipe-catalog.js'),
   read('dtr-pwa.js'),
   read('dtr-quality.js')
@@ -72,6 +74,10 @@ assert.match(html, /class="stat-grid compact-stats"[\s\S]*?BASE CREDITS[\s\S]*?F
 assert.match(html, /data-view="calculator"[\s\S]*?>CALCULATOR</, 'desktop navigation must expose the calculator');
 assert.match(html, /id="calculatorView"/, 'calculator workspace must exist');
 assert(html.indexOf('recipe-catalog.js') < html.indexOf('dtr-calculator.js'), 'recipe catalog must load before the calculator runtime');
+assert(html.indexOf('dtr-calculator.js') < html.indexOf('dtr-production.js'), 'calculator bridge must load before the production runtime');
+assert.match(html, /id="productionPanel"[^>]+hidden/, 'Torrelavega production panel must be opt-in by POB view');
+assert.match(html, /POB PRIORITY STOCK[\s\S]*?Pinned Cargo/, 'POB detail must expose its dedicated pinned-stock area');
+assert(!html.includes('>WATCHED<'), 'visible inventory controls must use the clearer pinned terminology');
 
 assert.equal(catalog?.meta?.recipeCount, 292, 'Discovery catalog must contain all 292 supplied recipes');
 assert.equal(catalog?.recipes?.length, 292, 'catalog metadata and recipe payload must agree');
@@ -102,8 +108,20 @@ assert.match(calculator, /ALL \$\{total\} MATERIAL/, 'price completeness must be
 assert.match(calculator, /`\$\$\{fmt\(value\)\}`/, 'calculator currency must use Discovery dollar notation');
 assert.match(calculator, /adjustedPerCycle\(option\?\.qty, factor\) \* cycles/, 'Corsair IFF material factors must be applied per cycle');
 assert.match(calculator, /EXCLUDED FROM CONSUMED MATERIAL COST/, 'catalyst costing semantics must be explicit');
+assert.match(calculator, /function openRecipe\(/, 'calculator must expose a production-module bridge');
+assert.match(calculator, /selectedAlternatives\[`\$\{recipe\.id\}:\$\{index\}`\]/, 'production bridge must preserve selected alternative materials');
 
-const visibleSources = [html, app, calculator, quality, await read('dtr-uplink.js'), pwa].join('\n');
+assert.match(app, /pins:\s*'dtr:pob-pins:v2'/, 'POB pins must use the scoped v2 storage schema');
+assert.match(app, /POBS\.map\(pob => \[pob\.key, legacy\.map/, 'legacy global pins must migrate without data loss');
+assert.match(app, /pinsFor\(definition\.key\)/, 'reserve alerts must use only the current POB pin set');
+assert.match(app, /renderPins\(base, key\)/, 'detail cards must render the selected POB pin set');
+assert.match(production, /RECIPE_ID = 'recipe_gold_advanced'/, 'Torrelavega module must use the advanced Wildcat Gold recipe');
+assert.match(production, /DTR_AFFILIATION = 'fc_c_grp'/, 'production material logic must use the DTR Corsair affiliation');
+assert.match(production, /adjustedPerCycle\(option\?\.qty, factor\)/, 'production material quantities must apply the Corsair factor');
+assert.match(production, /bestCapacityOption/, 'alternative production inputs must select for available cycle capacity');
+assert.match(production, /DTRCalculator\.openRecipe/, 'production cost action must open a preselected calculator quote');
+
+const visibleSources = [html, app, calculator, production, quality, await read('dtr-uplink.js'), pwa].join('\n');
 const nonEnglishUi = [
   /lang="de"/i,
   /de-DE/,
@@ -133,11 +151,15 @@ assert.match(calculatorCss, /\.calculator-price-editor input\s*{[\s\S]*?min-heig
 assert.match(calculatorCss, /@media \(max-width: 760px\)[\s\S]*?\.calculator-price-editor > button\s*{[\s\S]*?min-height:\s*44px/, 'manual-price reset must remain touch friendly on phones');
 assert.match(calculatorCss, /@media \(max-width: 760px\)[\s\S]*?\.calculator-table tr\s*{[\s\S]*?display:\s*grid/, 'calculator materials must become mobile cards');
 assert.match(calculatorCss, /\.calculator-quote-grid\[data-cards="3"\]\s*{[\s\S]*?repeat\(3/, 'desktop quote cards must adapt when a real recipe fee exists');
+assert.match(productionCss, /@media \(max-width: 760px\)[\s\S]*?\.production-actions button\s*\{[\s\S]*?min-height:\s*52px/, 'production calculator action must remain touch friendly on phones');
+assert.match(productionCss, /\.production-materials li\s*\{[\s\S]*?grid-template-columns:/, 'production inputs must keep a structured desktop layout');
 assert.match(quality, /id="dtrCalculatorLaunch"/, 'mobile header controls must expose the calculator');
-assert.match(quality, /version:\s*'0\.7\.3'/, 'visible build version must match v0.7.3');
-assert.match(sw, /v0\.7\.3/, 'service-worker cache must match v0.7.3');
+assert.match(quality, /version:\s*'0\.7\.4'/, 'visible build version must match v0.7.4');
+assert.match(sw, /v0\.7\.4/, 'service-worker cache must match v0.7.4');
 assert(sw.includes('./recipe-catalog.js'), 'recipe catalog must be available offline');
 assert(sw.includes('./dtr-calculator.js'), 'calculator runtime must be available offline');
+assert(sw.includes('./dtr-production.js'), 'production runtime must be available offline');
+assert(sw.includes('./dtr-production.css'), 'production styling must be available offline');
 
 for (const cssPath of localRuntimeRefs.filter(path => path.endsWith('.css'))) {
   const css = await read(cssPath);

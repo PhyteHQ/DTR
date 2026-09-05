@@ -657,6 +657,38 @@
     }
   }
 
+  function openRecipe({ recipeId, pobKey, quantity, alternatives = {} } = {}) {
+    const recipe = (CATALOG?.recipes || []).find(entry => entry.id === recipeId)
+      || (CATALOG?.recipes || []).find(entry => entry.id === state.recipeId)
+      || CATALOG?.recipes?.[0];
+    if (!recipe) return false;
+
+    const validPobs = window.DTRApp?.POBS || [];
+    const resolvedPob = validPobs.some(pob => pob.key === pobKey)
+      ? pobKey
+      : validPobs.some(pob => pob.key === state.pobKey)
+        ? state.pobKey
+        : DEFAULT_POB;
+    const selectedAlternatives = {};
+    for (const [rawIndex, optionId] of Object.entries(alternatives || {})) {
+      const index = Number(rawIndex);
+      const group = recipe.inputs?.[index];
+      if (!Number.isInteger(index) || !group?.options?.some(option => option.id === optionId)) continue;
+      selectedAlternatives[`${recipe.id}:${index}`] = optionId;
+    }
+
+    saveState({
+      recipeId: recipe.id,
+      search: '',
+      pobKey: resolvedPob,
+      quantity: Math.max(1, Math.floor(finite(quantity) ?? finite(effectiveOutput(recipe)?.qty) ?? 1)),
+      alternatives: selectedAlternatives
+    });
+    window.DTRApp?.show?.('calculator');
+    render();
+    return true;
+  }
+
   function init() {
     root = document.getElementById('calculatorView');
     if (!root) return;
@@ -681,6 +713,7 @@
 
   window.DTRCalculator = Object.freeze({
     render,
+    openRecipe,
     matchingRecipes,
     findInventoryItem,
     pobSalePrice,

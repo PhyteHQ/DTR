@@ -12,7 +12,8 @@
   const KEYS = Object.freeze({
     live: 'dtr:pobs:live:v2',
     previous: 'dtr:pobs:previous:v2',
-    watch: 'dtr:watchlist:v1',
+    legacyWatch: 'dtr:watchlist:v1',
+    pins: 'dtr:pob-pins:v2',
     view: 'dtr:view:v1',
     recoveries: 'dtr:storage-recoveries:v1'
   });
@@ -477,24 +478,51 @@
     return states.reduce((current, candidate) => severity(candidate) > severity(current) ? candidate : current, 'good');
   }
 
-  function watchlist() {
-    const raw = loadJson(KEYS.watch);
-    return Array.isArray(raw) ? raw.filter(entry => entry && entry.key && entry.label) : [];
+  function cleanPins(value) {
+    if (!Array.isArray(value)) return [];
+    const seen = new Set();
+    return value.filter(entry => {
+      const key = norm(entry?.key);
+      if (!key || !entry?.label || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).map(entry => ({ key: norm(entry.key), label: String(entry.label) }));
   }
 
-  function setWatchlist(list) {
-    return saveJson(KEYS.watch, list);
+  function pinStore() {
+    const saved = loadJson(KEYS.pins);
+    if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
+      return Object.fromEntries(POBS.map(pob => [pob.key, cleanPins(saved[pob.key])]));
+    }
+
+    // v0.7.4 migration: the old global watchlist becomes the initial pin set on
+    // every POB. From this point onward every base owns its pins independently.
+    const legacy = cleanPins(loadJson(KEYS.legacyWatch));
+    const migrated = Object.fromEntries(POBS.map(pob => [pob.key, legacy.map(entry => ({ ...entry }))]));
+    saveJson(KEYS.pins, migrated);
+    return migrated;
   }
 
-  function toggleWatch(name) {
+  function pinsFor(pobKey) {
+    return pinStore()[pobKey] || [];
+  }
+
+  function setPins(pobKey, list) {
+    const store = pinStore();
+    store[pobKey] = cleanPins(list);
+    return saveJson(KEYS.pins, store);
+  }
+
+  function togglePin(name, pobKey = view) {
+    if (!POBS.some(pob => pob.key === pobKey)) return;
     const key = norm(name);
-    const list = watchlist();
+    const list = pinsFor(pobKey);
     const index = list.findIndex(entry => entry.key === key);
     if (index >= 0) list.splice(index, 1);
     else list.push({ key, label: String(name) });
-    setWatchlist(list);
+    setPins(pobKey, list);
     render();
-    emitState('watchlist');
+    emitState('pob-pins');
   }
 
   function baseAlerts(definition, base) {
@@ -541,15 +569,15 @@
     });
 
     const maintenanceKeys = new Set(MAINT.map(item => item.key));
-    watchlist().forEach(watched => {
-      if (maintenanceKeys.has(watched.key)) return;
-      const item = itemByName(base, watched.label);
+    pinsFor(definition.key).forEach(pinned => {
+      if (maintenanceKeys.has(pinned.key)) return;
+      const item = itemByName(base, pinned.label);
       if (!item || !boundary(item).valid) return;
       const state = stockState(item);
       if (state === 'danger' || state === 'warn') {
         alerts.push({
           tone: state,
-          title: `${watched.label.toUpperCase()} WATCH ALERT`,
+          title: `${pinned.label.toUpperCase()} PINNED RESERVE`,
           detail: `${fmt(qty(item))} units remain against the configured stock limits.`
         });
       }
@@ -647,9 +675,15 @@
       label: item.label,
       maintenance: item
     }));
-    watchlist().forEach(watched => {
-      if (!rows.some(row => row.key === watched.key)) {
-        rows.push({ key: watched.key, label: watched.label, maintenance: null });
+    const networkPins = new Map();
+    POBS.forEach(pob => pinsFor(pob.key).forEach(pinned => {
+      const entry = networkPins.get(pinned.key) || { ...pinned, pobKeys: new Set() };
+      entry.pobKeys.add(pob.key);
+      networkPins.set(pinned.key, entry);
+    }));
+    networkPins.forEach(pinned => {
+      if (!rows.some(row => row.key === pinned.key)) {
+        rows.push({ key: pinned.key, label: pinned.label, maintenance: null, pobKeys: pinned.pobKeys });
       }
     });
     return rows;
@@ -657,7 +691,7 @@
 
   function renderMatrix() {
     const rows = matrixRows();
-    E.matrix.innerHTML = `<div class="matrix-table" role="table" aria-label="Cross-POB reserve matrix"><div class="matrix-row matrix-head" role="row"><span role="columnheader">COMMODITY</span>${POBS.map(pob => `<span role="columnheader">${esc(pob.short)}</span>`).join('')}</div>${rows.map(row => `<div class="matrix-row" role="row"><strong role="rowheader">${esc(row.label)}${row.maintenance ? '<small>MAINT</small>' : '<small>WATCH</small>'}</strong>${POBS.map(pob => {
+    E.matrix.innerHTML = `<div class="matrix-table" role="table" aria-label="Cross-POB reserve matrix"><div class="matrix-row matrix-head" role="row"><span role="columnheader">COMMODITY</span>${POBS.map(pob => `<span role="columnheader">${esc(pob.short)}</span>`).join('')}</div>${rows.map(row => `<div class="matrix-row" role="row"><strong role="rowheader">${esc(row.label)}${row.maintenance ? '<small>MAINT</small>' : `<small>PIN ${row.pobKeys?.size || 0}/4</small>`}</strong>${POBS.map(pob => {
       const base = bases.get(pob.key);
       const item = base ? itemByName(base, row.label) : null;
       const state = row.maintenance ? maintenanceState(item, row.maintenance) : stockState(item);
@@ -704,17 +738,17 @@
       : '<div class="priority-empty"><i></i><div><strong>NO ACTIVE ALERTS</strong><span>Facility health and monitored reserves are nominal.</span></div></div>';
   }
 
-  function renderWatch(base) {
-    const list = watchlist();
-    E.watchCount.textContent = `${list.length} WATCHED`;
+  function renderPins(base, pobKey) {
+    const list = pinsFor(pobKey);
+    E.watchCount.textContent = `${list.length} PINNED`;
     if (!list.length) {
-      E.watchGrid.innerHTML = '<div class="watch-empty">WATCHLIST EMPTY <small>Star cargo in the manifest to pin it here.</small></div>';
+      E.watchGrid.innerHTML = '<div class="watch-empty">NO PRIORITY CARGO PINNED <small>Use the star in this POB\'s manifest to keep important stock here.</small></div>';
       return;
     }
-    E.watchGrid.innerHTML = list.map(watched => {
-      const item = base ? itemByName(base, watched.label) : null;
+    E.watchGrid.innerHTML = list.map(pinned => {
+      const item = base ? itemByName(base, pinned.label) : null;
       const quantity = qty(item);
-      return `<article class="watch-card" data-tone="${stockState(item)}"><button class="watch-remove" type="button" data-unwatch="${esc(watched.label)}" aria-label="Remove ${esc(watched.label)} from watchlist">×</button><small>WATCHED CARGO</small><strong>${esc(watched.label)}</strong><b>${fmt(quantity)}</b><span class="watch-meta">${quantity === null ? 'NOT REPORTED' : 'UNITS'}</span>${stockMarkup(item, true)}</article>`;
+      return `<article class="watch-card" data-tone="${stockState(item)}"><button class="watch-remove" type="button" data-unpin="${esc(pinned.label)}" aria-label="Unpin ${esc(pinned.label)} from this POB">×</button><small>PINNED // ${esc(POBS.find(pob => pob.key === pobKey)?.short || 'POB')}</small><strong>${esc(pinned.label)}</strong><b>${fmt(quantity)}</b><span class="watch-meta">${quantity === null ? 'NOT REPORTED' : 'UNITS'}</span>${stockMarkup(item, true)}</article>`;
     }).join('');
   }
 
@@ -726,12 +760,12 @@
       return;
     }
     const query = norm(E.search.value);
-    const watched = new Set(watchlist().map(entry => entry.key));
+    const pinned = new Set(pinsFor(view).map(entry => entry.key));
     let list = items(base);
     list = list.filter(item => {
       const key = itemKey(item);
       if (query && !key.includes(query)) return false;
-      if (inventoryFilter === 'watch') return watched.has(key);
+      if (inventoryFilter === 'watch') return pinned.has(key);
       if (inventoryFilter === 'buy') return (buy(item) ?? 0) > 0;
       if (inventoryFilter === 'sell') return (sell(item) ?? 0) > 0;
       return true;
@@ -739,8 +773,8 @@
 
     E.body.innerHTML = list.map(item => {
       const name = itemName(item);
-      const watchedItem = watched.has(itemKey(item));
-      return `<tr><td data-label="WATCH"><button class="watch-toggle${watchedItem ? ' active' : ''}" type="button" data-watch="${esc(name)}" aria-label="${watchedItem ? 'Remove' : 'Add'} ${esc(name)} ${watchedItem ? 'from' : 'to'} watchlist">★</button></td><td class="item-name" data-label="ITEM">${esc(name)}</td><td data-label="QUANTITY">${fmt(qty(item))}</td><td class="muted" data-label="BASE BUYS">${esc(price(buy(item)))}</td><td class="muted" data-label="BASE SELLS">${esc(price(sell(item)))}</td><td class="stock-cell" data-label="STOCK LEVEL">${stockMarkup(item)}</td></tr>`;
+      const pinnedItem = pinned.has(itemKey(item));
+      return `<tr><td data-label="PIN"><button class="watch-toggle${pinnedItem ? ' active' : ''}" type="button" data-pin="${esc(name)}" aria-label="${pinnedItem ? 'Unpin' : 'Pin'} ${esc(name)} ${pinnedItem ? 'from' : 'to'} this POB">★</button></td><td class="item-name" data-label="ITEM">${esc(name)}</td><td data-label="QUANTITY">${fmt(qty(item))}</td><td class="muted" data-label="BASE BUYS">${esc(price(buy(item)))}</td><td class="muted" data-label="BASE SELLS">${esc(price(sell(item)))}</td><td class="stock-cell" data-label="STOCK LEVEL">${stockMarkup(item)}</td></tr>`;
     }).join('');
     E.empty.textContent = 'NO MATCHING COMMODITY FOUND';
     E.empty.hidden = list.length > 0;
@@ -777,7 +811,7 @@
       E.detailDelta.textContent = 'NODE NOT FOUND IN CURRENT FEED';
       renderMaintenance(null);
       renderPriority(definition, null);
-      renderWatch(null);
+      renderPins(null, key);
       renderItems(null);
       return;
     }
@@ -797,7 +831,7 @@
     E.detailDelta.textContent = previousBase ? 'PREVIOUS SNAPSHOT AVAILABLE' : 'NO PREVIOUS SNAPSHOT FOR COMPARISON';
     renderMaintenance(base);
     renderPriority(definition, base);
-    renderWatch(base);
+    renderPins(base, key);
     renderItems(base);
   }
 
@@ -1045,12 +1079,12 @@
     renderItems(bases.get(view));
   });
   E.body.addEventListener('click', event => {
-    const button = event.target.closest('[data-watch]');
-    if (button) toggleWatch(button.dataset.watch);
+    const button = event.target.closest('[data-pin]');
+    if (button) togglePin(button.dataset.pin, view);
   });
   E.watchGrid.addEventListener('click', event => {
-    const button = event.target.closest('[data-unwatch]');
-    if (button) toggleWatch(button.dataset.unwatch);
+    const button = event.target.closest('[data-unpin]');
+    if (button) togglePin(button.dataset.unpin, view);
   });
   E.refresh.addEventListener('click', load);
   E.systemButton.addEventListener('click', openSystem);

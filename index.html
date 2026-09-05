@@ -23,6 +23,7 @@
   <link rel="stylesheet" href="./dtr-uplink.css">
   <link rel="stylesheet" href="./dtr-responsive.css">
   <link rel="stylesheet" href="./dtr-calculator.css">
+  <link rel="stylesheet" href="./dtr-production.css">
 </head>
 <body>
   <div class="ambient-grid" aria-hidden="true"></div>
@@ -93,7 +94,7 @@
           <div>
             <p class="section-kicker">CROSS-POB RESERVE MAP</p>
             <h3>Network Matrix</h3>
-            <p class="section-subline">Facility maintenance + watched cargo across every node</p>
+            <p class="section-subline">Facility maintenance + POB-specific priority cargo across every node</p>
           </div>
           <span class="matrix-hint">SWIPE OR SCROLL // TAP A CELL</span>
         </div>
@@ -146,21 +147,29 @@
         </section>
       </div>
 
+      <section class="production-panel" id="productionPanel" hidden>
+        <div class="section-head compact">
+          <div><p class="section-kicker">TORRELAVEGA PRODUCTION</p><h3>Wildcat Gold Refining</h3><p class="section-subline">Advanced recipe // Corsair material efficiency // live POB stock</p></div>
+          <span class="production-state" id="productionState">CHECKING</span>
+        </div>
+        <div id="productionGrid"></div>
+      </section>
+
       <section class="watch-panel">
         <div class="section-head compact">
-          <div><p class="section-kicker">WATCHED CARGO</p><h3>Quick Reserves</h3><p class="section-subline">Star commodities in the manifest to pin them here and into the network matrix</p></div>
-          <span class="watch-count" id="watchCount">0 WATCHED</span>
+          <div><p class="section-kicker">POB PRIORITY STOCK</p><h3>Pinned Cargo</h3><p class="section-subline">Each POB keeps its own pins // star commodities in this base's manifest</p></div>
+          <span class="watch-count" id="watchCount">0 PINNED</span>
         </div>
         <div class="watch-grid" id="watchGrid"></div>
       </section>
 
       <section class="inventory-panel">
         <div class="inventory-head">
-          <div><p class="section-kicker">CARGO MANIFEST</p><h3>Base Inventory</h3><p class="section-subline">Live stock // quotations // watch controls</p></div>
+          <div><p class="section-kicker">CARGO MANIFEST</p><h3>Base Inventory</h3><p class="section-subline">Live stock // quotations // POB pin controls</p></div>
           <div class="inventory-tools">
             <div class="filter-segments" id="inventoryFilters">
               <button class="active" data-filter="all" type="button">ALL</button>
-              <button data-filter="watch" type="button">WATCHED</button>
+              <button data-filter="watch" type="button">PINNED</button>
               <button data-filter="buy" type="button">BASE BUYS</button>
               <button data-filter="sell" type="button">BASE SELLS</button>
             </div>
@@ -169,7 +178,7 @@
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>WATCH</th><th>ITEM</th><th>QUANTITY</th><th>BASE BUYS</th><th>BASE SELLS</th><th>STOCK LEVEL</th></tr></thead>
+            <thead><tr><th>PIN</th><th>ITEM</th><th>QUANTITY</th><th>BASE BUYS</th><th>BASE SELLS</th><th>STOCK LEVEL</th></tr></thead>
             <tbody id="inventoryBody"></tbody>
           </table>
         </div>
@@ -201,6 +210,7 @@
   <script src="./recipe-catalog.js"></script>
   <script src="./app.js"></script>
   <script src="./dtr-calculator.js"></script>
+  <script src="./dtr-production.js"></script>
   <script src="./dtr-quality.js"></script>
   <script src="./dtr-uplink.js"></script>
 </body>
