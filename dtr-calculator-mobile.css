@@ -1,0 +1,123 @@
+/* DTR calculator mobile layout hardening.
+   Keep alternative-material selectors inside their own material row so
+   recipe cards cannot overlap price, cost or status fields on phones. */
+@media (max-width: 760px) {
+  #calculatorView .calculator-table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "material material"
+      "required stock"
+      "price price"
+      "cost status";
+    align-items: start;
+    gap: 12px 10px;
+  }
+
+  #calculatorView .calculator-table td {
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+    overflow: visible;
+  }
+
+  #calculatorView .calculator-table td:nth-child(1) {
+    grid-area: material;
+    min-width: 0;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(157, 48, 57, 0.13);
+  }
+
+  #calculatorView .calculator-table td:nth-child(2) { grid-area: required; }
+  #calculatorView .calculator-table td:nth-child(3) { grid-area: stock; }
+  #calculatorView .calculator-table td:nth-child(4) { grid-area: price; }
+  #calculatorView .calculator-table td:nth-child(5) { grid-area: cost; }
+  #calculatorView .calculator-table td:nth-child(6) { grid-area: status; }
+
+  #calculatorView .calculator-table td:last-child {
+    display: block;
+    align-self: end;
+  }
+
+  #calculatorView .calculator-table td:last-child::before {
+    content: "STATUS";
+    display: block;
+    margin-bottom: 5px;
+    color: #948990;
+    font: 0.67rem "Oxanium", sans-serif;
+    letter-spacing: 0.055em;
+  }
+
+  #calculatorView .calculator-alternative {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    margin-top: 12px;
+    padding: 10px;
+    overflow: hidden;
+  }
+
+  #calculatorView .calculator-alternative select {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 50px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #calculatorView .calculator-alternative > span,
+  #calculatorView .calculator-alternative > small {
+    display: block;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  #calculatorView .calculator-price-editor,
+  #calculatorView .calculator-price-editor > div {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  #calculatorView .calculator-status {
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
+}
+
+@media (max-width: 430px) {
+  #calculatorView .calculator-table tr {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "material"
+      "required"
+      "stock"
+      "price"
+      "cost"
+      "status";
+    gap: 11px;
+  }
+
+  #calculatorView .calculator-table td:not(:first-child) {
+    padding-top: 2px;
+  }
+
+  #calculatorView .calculator-table td:nth-child(2),
+  #calculatorView .calculator-table td:nth-child(3),
+  #calculatorView .calculator-table td:nth-child(5),
+  #calculatorView .calculator-table td:nth-child(6) {
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(157, 48, 57, 0.08);
+  }
+
+  #calculatorView .calculator-table td:nth-child(6) {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+}
