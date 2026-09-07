@@ -67,6 +67,23 @@
     });
   }
 
-  new MutationObserver(fixCalculatorLabels).observe(document.body, { childList: true, subtree: true });
-  fixCalculatorLabels();
+  function scheduleLabelFix(delay = 0) {
+    window.setTimeout(fixCalculatorLabels, delay);
+  }
+
+  window.addEventListener('dtr:statechange', () => scheduleLabelFix());
+  document.addEventListener('click', event => {
+    if (event.target?.closest?.('#calculatorView')) scheduleLabelFix();
+  }, true);
+  document.addEventListener('change', event => {
+    if (event.target?.closest?.('#calculatorView')) scheduleLabelFix();
+  }, true);
+  document.addEventListener('input', event => {
+    if (event.target?.closest?.('#calculatorView')) scheduleLabelFix(180);
+  }, true);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => scheduleLabelFix(), { once: true });
+  } else {
+    scheduleLabelFix();
+  }
 })();
