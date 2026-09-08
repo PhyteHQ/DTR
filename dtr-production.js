@@ -1,32 +1,51 @@
-/* DTR Torrelavega production modules · live stock against fixed facility recipes. */
+/* DTR POB production modules · shared Scrap Smelter + POB-specific production. */
 (() => {
   'use strict';
 
-  const POB_KEY = 'fort-torrelavega';
   const DTR_AFFILIATION = 'fc_c_grp';
-  const MODULES = Object.freeze([
-    Object.freeze({
-      recipeId: 'recipe_gold_advanced',
-      code: 'MODULE-04',
-      process: 'ADVANCED GOLD REFINING',
-      preferredAlternatives: Object.freeze({ 2: 'commodity_mox_fuel' })
-    }),
-    Object.freeze({
-      recipeId: 'recipe_scrap_advanced',
-      code: 'MODULE-05',
-      process: 'SCRAP SMELTER',
-      preferredAlternatives: Object.freeze({
-        1: 'commodity_mox_fuel',
-        2: 'commodity_scrap_metal'
-      })
-    })
+  const TORRELAVEGA_KEY = 'fort-torrelavega';
+  const POB_KEYS = Object.freeze([
+    'deterrence-sanctum',
+    'ravenna-invicta',
+    'forja-del-vacio',
+    TORRELAVEGA_KEY
   ]);
-  const RECIPE_IDS = Object.freeze(MODULES.map(module => module.recipeId));
+
+  const GOLD_MODULE = Object.freeze({
+    recipeId: 'recipe_gold_advanced',
+    code: 'MODULE-04',
+    process: 'ADVANCED GOLD REFINING',
+    preferredAlternatives: Object.freeze({ 2: 'commodity_mox_fuel' })
+  });
+
+  const SCRAP_MODULE = Object.freeze({
+    recipeId: 'recipe_scrap_advanced',
+    code: 'MODULE-05',
+    process: 'SCRAP SMELTER',
+    preferredAlternatives: Object.freeze({
+      1: 'commodity_mox_fuel',
+      2: 'commodity_scrap_metal'
+    })
+  });
+
+  const MODULES_BY_POB = Object.freeze({
+    'deterrence-sanctum': Object.freeze([SCRAP_MODULE]),
+    'ravenna-invicta': Object.freeze([SCRAP_MODULE]),
+    'forja-del-vacio': Object.freeze([SCRAP_MODULE]),
+    [TORRELAVEGA_KEY]: Object.freeze([GOLD_MODULE, SCRAP_MODULE])
+  });
+
+  const RECIPE_IDS = Object.freeze([...new Set(
+    Object.values(MODULES_BY_POB).flat().map(module => module.recipeId)
+  )]);
   const LOCALE = 'en-GB';
   const numberFormat = new Intl.NumberFormat(LOCALE);
+
   let panel = null;
   let grid = null;
   let status = null;
+  let kicker = null;
+  let subline = null;
 
   const finite = value => {
     if (value === null || value === undefined || value === '') return null;
@@ -85,13 +104,13 @@
     return finite(item?.quantity ?? item?.amount ?? item?.stock);
   }
 
-  function pobSalePrice(item) {
+  function pobPurchasePrice(item) {
     if (!item) return null;
     const value = finite(
-      item?.price
-      ?? item?.price_to_buy_from_base
-      ?? item?.buy_price
-      ?? item?.price_buy
+      item?.price_to_sell_to_base
+      ?? item?.sell_price
+      ?? item?.price_sell
+      ?? item?.price
     );
     return value !== null && value > 0 ? value : null;
   }
@@ -121,7 +140,7 @@
       item,
       required,
       stock,
-      price: pobSalePrice(item),
+      price: pobPurchasePrice(item),
       capacity: required > 0 && stock !== null ? Math.max(0, Math.floor(stock / required)) : 0
     };
   }
@@ -228,7 +247,7 @@
     return snapshot.cycles < 10 ? 'LOW CAPACITY' : 'STABLE';
   }
 
-  function renderCard(module, snapshot, base) {
+  function renderCard(module, snapshot, base, pobKey) {
     const nextCycle = snapshot.bottleneck
       ? `NEXT +1 CYCLE // ${esc(snapshot.bottleneck.option.name)} +${fmt(snapshot.bottleneck.gap)}`
       : 'NEXT CYCLE // MATERIAL STATUS UNAVAILABLE';
@@ -245,7 +264,7 @@
       <div class="production-command">
         <p>YIELD / CYCLE <strong>${fmt(snapshot.outputPerCycle)}</strong></p>
         <span>${efficiencyLabel}</span>
-        <button type="button" data-production-calculate="${esc(module.recipeId)}">COST / CALCULATE</button>
+        <button type="button" data-production-calculate="${esc(module.recipeId)}" data-production-pob="${esc(pobKey)}">COST / CALCULATE</button>
       </div>
       <div class="production-metrics">
         <div><small>MAX CYCLES</small><strong>${base ? fmt(snapshot.cycles) : '—'}</strong></div>
@@ -264,21 +283,43 @@
     </article>`;
   }
 
+  function modulesFor(pobKey) {
+    return MODULES_BY_POB[pobKey] || [];
+  }
+
+  function pobDefinition(pobKey) {
+    return (window.DTRApp?.POBS || []).find(pob => pob.key === pobKey) || null;
+  }
+
+  function updateHeading(pobKey, moduleCount) {
+    const definition = pobDefinition(pobKey);
+    if (kicker) kicker.textContent = `${definition?.short || 'POB'} PRODUCTION`;
+    if (subline) {
+      subline.textContent = pobKey === TORRELAVEGA_KEY
+        ? 'Wildcat Gold // Basic Alloy // live material capacity'
+        : 'Scrap Smelter // Basic Alloy // live material capacity';
+    }
+    if (grid?.dataset) grid.dataset.modules = String(moduleCount);
+    if (grid?.style) grid.style.gridTemplateColumns = moduleCount === 1 ? '1fr' : '';
+  }
+
   function render() {
     if (!panel || !grid || !status) return;
     const appState = window.DTRApp?.getState?.();
-    const active = appState?.view === POB_KEY;
-    panel.hidden = !active;
-    if (!active) return;
+    const pobKey = POB_KEYS.includes(appState?.view) ? appState.view : null;
+    panel.hidden = !pobKey;
+    if (!pobKey) return;
 
+    const modules = modulesFor(pobKey);
+    updateHeading(pobKey, modules.length);
     const catalog = window.DTR_RECIPE_CATALOG?.recipes || [];
-    const base = appState?.bases?.get?.(POB_KEY) || null;
-    const resolved = MODULES.map(module => {
+    const base = appState?.bases?.get?.(pobKey) || null;
+    const resolved = modules.map(module => {
       const recipe = catalog.find(entry => entry.id === module.recipeId);
       return recipe ? { module, snapshot: createSnapshot(recipe, base, module.preferredAlternatives) } : null;
     }).filter(Boolean);
 
-    if (resolved.length !== MODULES.length) {
+    if (resolved.length !== modules.length) {
       status.dataset.tone = 'danger';
       status.textContent = 'RECIPE UNAVAILABLE';
     } else {
@@ -287,28 +328,33 @@
         : resolved.some(entry => entry.snapshot.tone === 'danger')
           ? 'danger'
           : resolved.some(entry => entry.snapshot.tone === 'warn') ? 'warn' : 'good';
-      status.textContent = !base ? 'NO POB FEED' : `${resolved.length} MODULES`;
+      status.textContent = !base
+        ? 'NO POB FEED'
+        : `${resolved.length} MODULE${resolved.length === 1 ? '' : 'S'}`;
     }
 
     grid.innerHTML = resolved.length
-      ? resolved.map(entry => renderCard(entry.module, entry.snapshot, base)).join('')
+      ? resolved.map(entry => renderCard(entry.module, entry.snapshot, base, pobKey)).join('')
       : '<div class="production-empty" data-tone="danger">PRODUCTION RECIPES NOT FOUND.</div>';
   }
 
-  function openCalculator(recipeId) {
-    const module = MODULES.find(entry => entry.recipeId === recipeId);
-    const recipe = window.DTR_RECIPE_CATALOG?.recipes?.find(entry => entry.id === recipeId);
+  function openCalculator(recipeId, requestedPobKey) {
     const appState = window.DTRApp?.getState?.();
+    const activePobKey = POB_KEYS.includes(requestedPobKey)
+      ? requestedPobKey
+      : POB_KEYS.includes(appState?.view) ? appState.view : TORRELAVEGA_KEY;
+    const module = modulesFor(activePobKey).find(entry => entry.recipeId === recipeId);
+    const recipe = window.DTR_RECIPE_CATALOG?.recipes?.find(entry => entry.id === recipeId);
     const snapshot = createSnapshot(
       recipe,
-      appState?.bases?.get?.(POB_KEY) || null,
+      appState?.bases?.get?.(activePobKey) || null,
       module?.preferredAlternatives
     );
     if (!module || !snapshot) return;
     if (window.DTRCalculator?.openRecipe) {
       window.DTRCalculator.openRecipe({
         recipeId,
-        pobKey: POB_KEY,
+        pobKey: activePobKey,
         quantity: Math.max(1, snapshot.outputPerCycle),
         alternatives: snapshot.alternatives
       });
@@ -321,18 +367,23 @@
     panel = document.getElementById('productionPanel');
     grid = document.getElementById('productionGrid');
     status = document.getElementById('productionState');
+    kicker = panel?.querySelector?.('.section-kicker') || null;
+    subline = panel?.querySelector?.('.section-subline') || null;
     if (!panel || !grid || !status) return;
     panel.addEventListener('click', event => {
       const button = event.target.closest('[data-production-calculate]');
-      if (button) openCalculator(button.dataset.productionCalculate);
+      if (button) openCalculator(button.dataset.productionCalculate, button.dataset.productionPob);
     });
     render();
   }
 
   window.DTRProduction = Object.freeze({
     RECIPE_IDS,
-    POB_KEY,
+    POB_KEY: TORRELAVEGA_KEY,
+    POB_KEYS,
+    MODULES_BY_POB,
     createSnapshot,
+    modulesFor,
     render
   });
 
