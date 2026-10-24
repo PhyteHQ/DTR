@@ -866,14 +866,47 @@
     });
   }
 
+  function validateTelemetry(source) {
+    const record = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+    const named = value => ['name', 'nickname', 'base_name', 'display_name', 'good_name', 'commodity_name', 'good', 'id', 'item_id', 'good_id']
+      .some(key => (typeof value[key] === 'string' && value[key].trim()) || (typeof value[key] === 'number' && Number.isFinite(value[key])));
+    if (!Array.isArray(source) || !source.length || source.length > 10000) {
+      throw new Error('Invalid POB response: expected a non-empty base list.');
+    }
+    for (const base of source) {
+      if (!record(base) || !['name', 'nickname', 'base_name', 'display_name']
+        .some(key => typeof base[key] === 'string' && base[key].trim())) {
+        throw new Error('Invalid POB response: malformed base record.');
+      }
+      for (const key of ['shop_items', 'shopItems', 'goods']) {
+        if (base[key] === null || base[key] === undefined) continue;
+        if (!Array.isArray(base[key]) || base[key].length > 10000
+          || base[key].some(item => !record(item) || !named(item))) {
+          throw new Error('Invalid POB response: malformed inventory.');
+        }
+      }
+    }
+    return source;
+  }
+
+  function verifiedSnapshot(value) {
+    if (!value || !Number.isFinite(Date.parse(value.savedAt || ''))) return null;
+    try {
+      validateTelemetry(value.data);
+      return value;
+    } catch {
+      return null;
+    }
+  }
+
   function hydrateLatest({ renderNow = true } = {}) {
-    const live = loadJson(KEYS.live);
-    const previous = loadJson(KEYS.previous);
-    if (!Array.isArray(live?.data)) return false;
-    const savedAt = Date.parse(live.savedAt || '');
-    data = live.data;
-    previousData = Array.isArray(previous?.data) ? previous.data : [];
-    last = new Date(Number.isFinite(savedAt) ? savedAt : Date.now());
+    const live = verifiedSnapshot(loadJson(KEYS.live));
+    const previous = verifiedSnapshot(loadJson(KEYS.previous));
+    const latest = live || previous;
+    if (!latest) return false;
+    data = latest.data;
+    previousData = live && previous ? previous.data : [];
+    last = new Date(latest.savedAt);
     mode = 'cache';
     rebuild();
     status('cache', ageMs() >= STALE_DANGER_MS ? 'STALE CACHE' : 'CACHED DATA');
@@ -882,17 +915,18 @@
   }
 
   function persistLive(nextData) {
-    const current = loadJson(KEYS.live);
+    validateTelemetry(nextData);
+    const current = verifiedSnapshot(loadJson(KEYS.live));
     let previousSaved = true;
-    if (Array.isArray(current?.data)) previousSaved = saveJson(KEYS.previous, current);
+    if (current) previousSaved = saveJson(KEYS.previous, current);
     const liveSaved = saveJson(KEYS.live, {
       savedAt: new Date().toISOString(),
       data: nextData
     });
-    const fallbackPrevious = loadJson(KEYS.previous);
-    previousData = Array.isArray(current?.data)
+    const fallbackPrevious = verifiedSnapshot(loadJson(KEYS.previous));
+    previousData = current
       ? current.data
-      : Array.isArray(fallbackPrevious?.data)
+      : fallbackPrevious
         ? fallbackPrevious.data
         : [];
     return previousSaved && liveSaved;
@@ -902,11 +936,13 @@
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
     try {
-      return await fetch(API, {
+      const response = await fetch(API, {
         method: 'POST',
         headers: { Accept: 'application/json' },
         signal: controller.signal
       });
+      if (!response.ok) throw new Error(`Darkstat HTTP ${response.status}`);
+      return validateTelemetry(await response.json());
     } finally {
       clearTimeout(timeout);
     }
@@ -921,10 +957,7 @@
 
     loadInFlight = (async () => {
       try {
-        const response = await requestTelemetry();
-        if (!response.ok) throw new Error(`Darkstat HTTP ${response.status}`);
-        const next = await response.json();
-        if (!Array.isArray(next)) throw new Error('Invalid POB response');
+        const next = await requestTelemetry();
 
         const stored = persistLive(next);
         data = next;
@@ -1121,6 +1154,7 @@
     REFRESH_MS,
     STALE_WARN_MS,
     STALE_DANGER_MS,
+    validateTelemetry,
     refresh: load,
     show,
     storageCheck,

@@ -27,6 +27,8 @@ jobs:
           done
       - name: Run static quality audit
         run: node tests/static-audit.mjs
+      - name: Run telemetry validation and recovery audit
+        run: node tests/dtr-telemetry.test.mjs
       - name: Run help guide integration audit
         run: node tests/dtr-help.test.mjs
       - name: Run calculator runtime audit
@@ -48,6 +50,8 @@ jobs:
         run: node tests/dtr-route-policy.test.mjs
       - name: Run trade routes runtime audit
         run: node tests/dtr-trade-routes.test.mjs
+      - name: Run route sorting and POB market audit
+        run: node tests/dtr-market-runtime.mjs
       - name: Run ship profiles audit
         run: node tests/dtr-ships.test.mjs
       - name: Run ship selector interaction audit

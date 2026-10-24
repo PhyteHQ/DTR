@@ -39,7 +39,7 @@ assert(route.includes('tractors:corsairIds'),
   'the route access evaluator must use the Corsairs ID rephacks, not NPC faction diplomacy');
 assert(route.includes('corsairIds=Array.isArray(cached.corsairIds)'),
   'cached old faction-only market snapshots must not silently grant ID docking');
-assert(route.includes('cacheWrite({dataset,factions,corsairIds,loadedAt})'),
+assert(route.includes('cacheWrite({dataset,factions,corsairIds,loadedAt,pobLoadedAt})'),
   'cached market data must store the matching ID reputation snapshot');
 assert(route.includes("markResultsStale()"),'changing a profile or filter must invalidate outdated trade results');
 assert(route.includes("assessAccess(dataset.bases"),'Corsair access profile must actually affect search');

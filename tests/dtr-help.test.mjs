@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile,readdir} from 'node:fs/promises';
 import {dirname,join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {runInNewContext} from 'node:vm';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const read=path=>readFile(join(root,path),'utf8');
@@ -46,6 +47,43 @@ for(const screenshot of images){
 }
 for(const src of references)assert(images.includes(src), 'Broken guide screenshot: '+src);
 assert(service.includes('./help/guide.html'),'Full guide must be available offline');
-assert.match(service, /v1\.0\.8/, 'PWA must bump cache so the help files are stored');
+assert.match(service, /v1\.0\.9/, 'PWA must bump cache so the help fixes are stored');
 assert(docs.includes('## DTR Help Guide'),'Integration details documented');
+// Exercise the actual guide script: every visible contents link must still
+// point into a visible chapter, including links to its subheadings.
+const events=new Map();
+const targetMap=new Map();
+const chapter=(id,text)=>{
+ const section={id,textContent:text,style:{},closest(){return this;}};
+ targetMap.set(id,section);return section;
+};
+const chapters=[chapter('layout','Screen layout and navigation'),chapter('production','Produce Wildcat Gold')];
+const contents=[['layout',chapters[0]],['header',chapters[0]],['production',chapters[1]],['gold-inputs',chapters[1]]]
+ .map(([id,section])=>{
+  const target=id===section.id?section:{closest:()=>section};
+  targetMap.set(id,target);
+  const item={hidden:false};
+  return {id,item,getAttribute(){return '#'+id;},addEventListener(){},
+   parentNode:{classList:{toggle(name,hide){item.hidden=hide;}}}};
+ });
+const searchBox={value:'',addEventListener(type,handler){events.set(type,handler);}};
+const empty={style:{}},hero={style:{}};
+const guideNodes={'.dh-side':{},'.dh-menu':{addEventListener(){}},'.dh-search':searchBox,
+ '#dhEmpty':empty,'.dh-hero':hero,'.dh-lightbox':{querySelector(){return{};}}};
+const guideRoot={querySelector:key=>guideNodes[key],querySelectorAll:key=>
+ key==='.dh-toc a'?contents:key==='section.dh-sec'?chapters:[],addEventListener(){}};
+runInNewContext(guide.match(/<script>([\s\S]*?)<\/script>/)[1],{
+ window:{},document:{getElementById:id=>id==='dtr-help'?guideRoot:targetMap.get(id),addEventListener(){}}
+});
+searchBox.value='  WILDCAT  ';events.get('input')();
+assert.deepEqual(contents.filter(link=>!link.item.hidden).map(link=>link.id),['production','gold-inputs'],
+ 'search must hide a nonmatching chapter and all of its subsection links');
+assert.equal(chapters[0].style.display,'none');
+assert.equal(chapters[1].style.display,'');
+searchBox.value='no-such-guide-text';events.get('input')();
+assert(contents.every(link=>link.item.hidden),'no results must leave no dangling contents links');
+assert.equal(empty.style.display,'block');
+searchBox.value='';events.get('input')();
+assert(contents.every(link=>!link.item.hidden),'clearing search must restore every contents link');
+assert(chapters.every(section=>section.style.display===''));
 console.log('DTR Help Guide audit passed (header, responsive layout, all 29 full-quality WebP assets, section anchors, search, mobile navigation, offline cache).');

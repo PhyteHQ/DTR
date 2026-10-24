@@ -85,6 +85,14 @@ node tests/static-audit.mjs
 
 GitHub Actions checks JavaScript and ES module syntax and runs static, calculator, production, shipyard, forum, pricing, docking-policy and integrated trade-route runtime audits on changes to `main`.
 
+## Reliability update (v1.0.9)
+
+- Changing the trade result ranking preserves and reorders the existing routes. It does not cancel an active calculation; cargo and other search-parameter changes still invalidate outdated results.
+- POB telemetry is checked before it replaces a verified snapshot. Malformed base/inventory records and empty responses retain the last valid data and its original age. An invalid latest cache can fall back to the valid previous snapshot. Request timeouts cover downloading and parsing the response body.
+- The known Corsair no-dock IDs use the same normalization as incoming base IDs, so their restrictions also apply when display names or system metadata are missing or changed.
+- Guide search hides each nonmatching chapter together with its subsection links; clearing the search restores all contents links.
+- NPC-only route searches keep their market snapshot without automatic refresh calls. When INCLUDE POBs is enabled, CALCULATE checks POB data age and refreshes it if it is at least five minutes old. Fresh live dashboard telemetry is reused; otherwise only `/api/pobs` is requested. NPC offers, docking metadata and ship-specific commodity volumes remain intact. POB stock, prices, credits and free storage have their own cached freshness timestamp. Failed refreshes retain the previous snapshot with a visible warning. FORCE MARKET UPLINK remains the manual full-market refresh.
+
 - v1.0.6 relocates the editor to its own directly selectable Forum workspace, adds FIT/FILL, genuine zoom-out and precision move controls while preserving the unchanged 200×233 border and offline/browser-only export.
 
 - v1.0.7 fixes the PSD-style clipping issue while keeping the original 200 × 233 output, FIT/FILL, touch drag and Forum Composer. Tests validate complete RGBA mask decoding, transparent corner pixels and Canvas portrait → mask → border composition order. App update refreshes the cached mask.

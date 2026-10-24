@@ -1,5 +1,7 @@
 import { normalizeDarkstat } from '../trade-core/trade.mjs';
 import { findPlanetCrete, enrichBaseOwners, assessAccess, CORSAIR_ID_NICKNAME, REP_MODE } from '../dtr-route-policy.mjs';
+import {readFile} from 'node:fs/promises';
+import {runInNewContext} from 'node:vm';
 const API='https://darkstat.dd84ai.com/api';
 async function read(path,body){
   const timer=AbortSignal.timeout(20000);
@@ -21,6 +23,13 @@ const status=Object.fromEntries(Object.entries(all).map(([key,result])=>
 console.log('DTR TRADE LIVE ENDPOINTS '+JSON.stringify(status));
 if(pobs.status!=='fulfilled'||commodities.status!=='fulfilled')process.exitCode=1;
 else{
+  const appSource=await readFile(new URL('../app.js',import.meta.url),'utf8');
+  const validatorStart=appSource.indexOf('  function validateTelemetry(source)');
+  const validatorEnd=appSource.indexOf('  function verifiedSnapshot(',validatorStart);
+  if(validatorStart<0||validatorEnd<validatorStart)throw Error('POB validator missing from live-data audit');
+  const validateTelemetry=runInNewContext(appSource.slice(validatorStart,validatorEnd)+'validateTelemetry;');
+  validateTelemetry(pobs.value);
+  console.log('DTR LIVE POB VALIDATION PASSED '+pobs.value.length+' BASES');
   const ds=normalizeDarkstat(pobs.value,commodities.value);
   ds.bases=enrichBaseOwners(ds,npcs.status==='fulfilled'?npcs.value:[],pobs.value);
   const candidates=ds.bases.filter(x=>/crete/i.test(x.name||'')).map(x=>({id:x.id,name:x.name,system:x.systemName,kind:x.kind}));

@@ -9,10 +9,9 @@ export const LANE_SPEED = 2500;
 // Discovery playercntl_rephacks:
 // 0: cap reputation at MAX, 1: floor at MIN, 2: leave unchanged, 3: static.
 export const REP_MODE = Object.freeze({MAX:0, MIN:1, UNCHANGED:2, STATIC:3});
-const CORSAIR_NO_DOCK_IDS = new Set(['li01_01_base','ew16_01_base']);
-
 export const normalize = value => String(value??'').normalize('NFD')
   .replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+const CORSAIR_NO_DOCK_IDS = new Set(['li01_01_base','ew16_01_base'].map(normalize));
 const first=(obj,...keys)=>keys.map(k=>obj?.[k]).find(v=>v!==null&&v!==undefined&&v!=='');
 const repNumber=value=>{
   if(value===undefined||value===null||value==='')return null;

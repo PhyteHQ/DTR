@@ -116,6 +116,18 @@ const denied=assessAccess([manhattan,landing,unknownAlias],true,factions,{
 assert.deepEqual(denied.blocked,['li01_01_base','ew16_01_base','x_new'],
   'explicit unknown opt-in cannot bypass known Manhattan restrictions');
 assert.equal(assessAccess([manhattan,landing],false,factions,ids).blocked.length,0);
+const renamedNoDocks=[
+ {id:'li01_01_base',name:'Renamed Spaceport',kind:'npc',factionName:'Freelancers'},
+ {id:'EW16_01_BASE',name:'Another Port',kind:'npc',factionName:'Freelancers'}
+];
+for(const includeUnverified of [false,true]){
+ const checked=assessAccess(renamedNoDocks,true,factions,{tractors:carrier,includeUnverified});
+ assert.deepEqual(checked.blocked,renamedNoDocks.map(base=>base.id),
+  'known IDs must remain denied without matching names or system metadata');
+ assert(renamedNoDocks.every(base=>checked.byId.get(base.id).state==='restricted'));
+}
+assert.equal(assessAccess(renamedNoDocks,false,factions,ids).blocked.length,0,
+ 'ID normalization must preserve the Corsair OFF option');
 const nav=setLaneSpeed({schema:1,nodes:[],links:[
  {kind:'lane',speed:2250},{kind:'jump'},{kind:'cruise'}
 ]});

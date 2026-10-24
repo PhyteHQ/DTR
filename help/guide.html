@@ -351,7 +351,8 @@ body{margin:0;background:#050506}
   </div>
 
   <h3 id="results">Step 3 — Calculate &amp; read results</h3>
-  <p>Press <span class="ui">CALCULATE TRADE ROUTES ↗</span>. The search runs in the background; <span class="ui">ABORT SEARCH</span> stops it. <span class="ui">FORCE MARKET UPLINK</span> downloads fresh market prices first.</p>
+  <p>Press <span class="ui">CALCULATE TRADE ROUTES ↗</span>. The search runs in the background; <span class="ui">ABORT SEARCH</span> stops it. Changing the result ranking reorders the existing routes without clearing them.</p>
+  <p>With <span class="ui">INCLUDE POBs</span> enabled, calculating checks POB data age and updates stock, prices, credits and free storage when the snapshot is at least five minutes old. Current dashboard data is reused when available. NPC-only searches keep the loaded market snapshot. <span class="ui">FORCE MARKET UPLINK</span> refreshes the entire market manually.</p>
   <figure class="dh-shot mid"><img src="img/routes-results-empty.webp" alt="Trade candidates panel before a search" loading="lazy"><figcaption>The Trade Candidates panel waits for a flight plan.</figcaption></figure>
   <p>Each result card shows <b>Profit / Route</b>, <b>Profit / Hour</b>, <b>Flight time</b> and the legs with what to buy and sell. Use <b>Rank by</b> to sort by <span class="ui">$ / HOUR</span> or <span class="ui">TOTAL PROFIT</span>. <span class="ui">OPEN MANIFEST / ROUTE</span> shows the full step-by-step route; <span class="ui">SHOW MORE</span> reveals alternatives.</p>
   <div class="dh-note"><b>ESTIMATES //</b> Flight times are modelled (trade lanes counted at 2,500 m/s) and include the approach from your starting base. Prices move as other players trade, so check the market in game before buying. If you change ship or settings, the panel tells you to recalculate.</div>
@@ -551,8 +552,11 @@ body{margin:0;background:#050506}
       var hit = !q || s.textContent.toLowerCase().indexOf(q) !== -1;
       s.style.display = hit ? '' : 'none';
       if (hit) shown++;
-      var link = root.querySelector('.dh-toc a[href="#' + s.id + '"]');
-      if (link) link.parentNode.classList.toggle('hidden', !hit);
+    });
+    links.forEach(function (a) {
+      var target = document.getElementById(a.getAttribute('href').slice(1));
+      var section = target && target.closest('section.dh-sec');
+      a.parentNode.classList.toggle('hidden', !!section && section.style.display === 'none');
     });
     root.querySelector('.dh-hero').style.display = q ? 'none' : '';
     empty.style.display = shown ? 'none' : 'block';
