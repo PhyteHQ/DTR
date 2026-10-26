@@ -8,6 +8,7 @@ import { Navigator,validateNavigation } from '../trade-core/navigation.mjs';
 import { search } from '../trade-core/search.mjs';
 import { groupRoutes } from '../trade-core/variants.mjs';
 import { findPlanetCrete,assessAccess,setLaneSpeed,LANE_SPEED } from '../dtr-route-policy.mjs';
+import {FALLBACK_SHIPS,DEFAULT_SHIP_ID,blockedShipDocks} from '../dtr-ship-profiles.mjs';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const [html,partial,css,app,quality,route,worker,sw]=await Promise.all([
  ...['index.html','dtr-trade-panel.html','dtr-trade-routes.css','app.js','dtr-quality.js',
@@ -37,9 +38,9 @@ assert(route.includes("readJson('tractors',{include_rephacks:true,filter_nicknam
   'actual Corsairs ID rephacks must be requested by exact equipment nickname');
 assert(route.includes('tractors:corsairIds'),
   'the route access evaluator must use the Corsairs ID rephacks, not NPC faction diplomacy');
-assert(route.includes('corsairIds=Array.isArray(cached.corsairIds)'),
+assert(route.includes('corsairIds=verifiedCorsairIds(cached.corsairIds)'),
   'cached old faction-only market snapshots must not silently grant ID docking');
-assert(route.includes('cacheWrite({dataset,factions,corsairIds,loadedAt,pobLoadedAt})'),
+assert(route.includes('cacheWrite({dataset,factions,corsairIds,loadedAt,pobLoadedAt,idLoadedAt})'),
   'cached market data must store the matching ID reputation snapshot');
 assert(route.includes("markResultsStale()"),'changing a profile or filter must invalidate outdated trade results');
 assert(route.includes("assessAccess(dataset.bases"),'Corsair access profile must actually affect search');
@@ -50,7 +51,7 @@ assert(route.includes('access?.blocked.includes(origin.id)'),'starting bases mus
 assert(route.includes('access?.blocked.includes(b.id)'),'the base picker must not offer prohibited starting bases');
 assert(!partial.includes('VERIFIED OPPORTUNITIES'),'route candidates must not be falsely described as guaranteed docking');
 assert(route.includes("...($('dtrRoutesCorsair').checked?block:[])"),'Corsair filter must remain disableable');
-assert(route.includes('blockedShipDocks(dataset.bases,profile,navigation)'),'known incompatible ship docks must be excluded');
+assert(route.includes('blockUnknown:!$(\'dtrRoutesUnverified\').checked'),'known incompatible and opted-out unknown ship docks must be excluded');
 assert(route.includes("dockEligibility(origin.id,profile,navigation)==='blocked'"),'origin must obey selected ship docking class');
 assert(route.includes('shipController.mount()'),'ship selector should activate with the DTR workspace');
 assert(route.includes('returnScope:'),'return mode must be user-changeable');
@@ -97,4 +98,27 @@ assert.deepEqual(Array.from(access.blocked),['crete','shop','buyer'],
   'missing faction data must exclude unknown docking candidates by default');
 const transportNav=new Navigator(sampleNav,testBases,PROFILES[0]);
 assert(transportNav.route('crete','shop').seconds>0,'navigator must count approach to first trade');
-console.log('DTR Trade Routes runtime test passed (navigation, full graph, 2500 lanes, Crete approach, UI, worker and cargo classes).');
+const captured=JSON.parse(await readFile(join(root,'tests/fixtures/corsair-docking-2026-10-26.json'),'utf8'));
+const dockBase=(id,name,factionName)=>({id,name,factionName,system:'dock-test',systemName:'Dock Test',kind:'npc',
+ offers:[{id:'good',name:'Test Goods',buy:5,sell:20,volume:1,originalVolume:1}]});
+const dockBases=[dockBase('crete','Planet Crete','Corsairs'),dockBase('friendly-a','Friendly A','Corsairs'),
+ dockBase('friendly-b','Friendly B','Corsairs'),...captured.bases.map(b=>dockBase(b.base_nickname,b.base_name,b.faction_name)),
+ dockBase('ring-only','Ring-only Station','Corsairs'),dockBase('unmapped','Unmapped Dock','Corsairs')
+].map((base,i)=>({...base,pos:[i*1000,0,0]}));
+const dockNav={schema:1,nodes:dockBases.filter(base=>base.id!=='unmapped').map(base=>({
+ id:base.id,kind:'base',system:base.system,pos:base.pos,allows:base.id==='ring-only'?['berth']:['medium']
+})),links:[],baseNodes:Object.fromEntries(dockBases.filter(base=>base.id!=='unmapped').map(base=>[base.id,base.id])),systemMultipliers:{}};
+const ship=FALLBACK_SHIPS.find(profile=>profile.id===DEFAULT_SHIP_ID);
+const idAccess=assessAccess(dockBases,true,captured.factions,{tractors:[captured.id]});
+const blocked=[...idAccess.blocked,...blockedShipDocks(dockBases,ship,dockNav,{blockUnknown:true})];
+const dockDataset={schema:1,source:'docking regression fixture',asOf:new Date().toISOString(),bases:dockBases};
+for(const mode of ['one','two','three','auto'])for(const mixedCargo of [false,true])for(const allowUnknownTime of [false,true]){
+ const options={mode,mixedCargo,start:'crete',cargo:100,capital:10000,excludePobs:true,blocked,allowUnknownTime,
+  returnScope:'system',flexiblePickups:true,allowEmptyReturn:true,maxMinutes:60,sort:'profit',breadth:8,
+  maxChecks:500,searchMs:1000,mixedMs:250,timeModel:{dock:30,jump:15,lane:10,charge:5}};
+ const found=await search(dockDataset,dockNav,ship,options);
+ assert(found.results.length>0,'ordinary permitted routes must survive docking screening');
+ assert(found.results.every(route=>route.legs.every(leg=>!blocked.includes(leg.source)&&!blocked.includes(leg.target))),
+  mode+' must exclude all Order/Lane Hacker stops and incompatible/unknown ship docks in every cargo/time mode');
+}
+console.log('DTR routes passed (full navigation, all four search modes, mixed cargo, unknown-time opt-in, captured Order/Lane Hacker restrictions and ship docks).');

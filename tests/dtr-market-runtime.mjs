@@ -3,7 +3,8 @@ import {readFile} from 'node:fs/promises';
 import {runInNewContext} from 'node:vm';
 import {normalizeDarkstat} from '../trade-core/trade.mjs';
 import {groupRoutes} from '../trade-core/variants.mjs';
-import {findPlanetCrete,enrichBaseOwners,assessAccess,setLaneSpeed,LANE_SPEED,CORSAIR_ID_NICKNAME} from '../dtr-route-policy.mjs';
+import {findPlanetCrete,enrichBaseOwners,assessAccess,verifiedCorsairIds,setLaneSpeed,LANE_SPEED,CORSAIR_ID_NICKNAME} from '../dtr-route-policy.mjs';
+import {blockedShipDocks,dockEligibility,verifyShipProfile} from '../dtr-ship-profiles.mjs';
 
 const [routeSource,appSource]=await Promise.all([
  readFile(new URL('../dtr-trade-routes.mjs',import.meta.url),'utf8'),
@@ -13,7 +14,7 @@ const start=appSource.indexOf('  function validateTelemetry(source)');
 const end=appSource.indexOf('  function verifiedSnapshot(',start);
 assert(start>0&&end>start);
 const validateTelemetry=runInNewContext(appSource.slice(start,end)+'validateTelemetry;');
-const profile={id:'test',name:'Test Hauler',cargo:1000,cruise:350,dock:'medium',dockLabel:'MID'};
+const profile={id:'test',name:'Test Hauler',cargo:1000,cruise:350,dock:'medium',dockType:2,dockLabel:'MID'};
 const now=Date.now();
 const npc=(id,name,system)=>({id,name,kind:'npc',system,systemName:system,
  factionName:'Corsairs',offers:[{id:'commodity_test',name:'Test Goods',buy:10,sell:20,
@@ -31,11 +32,12 @@ const route=(target,profit,hourly)=>({legs:[{source:'crete',target,good:'commodi
  profit,hourly,seconds:600,tradeCount:1,jumps:0,capitalNeeded:100,roundTrip:false});
 const routes=[route('buyer',100,1000),route('third',200,500)];
 
-function runtime({includePobs=false,age=600000,telemetry={},reply=async()=>freshPobs}={}){
+function runtime({includePobs=false,age=600000,telemetry={},reply=async()=>freshPobs,
+ corsair=false,includeUnverified=false,market=initial,ownerFactions=[],ids=[],nav=null}={}){
  const elements=new Map(),storage=new Map(),apiCalls=[],messages=[],workers=[],snapshots=[];
  class Element{
   constructor(id){this.id=id;this.value='';this.checked=false;this.options=[];this.dataset={};
-   this.innerHTML='';this.textContent='';this.listeners=new Map();this.span={textContent:''};}
+   this.innerHTML='';this.textContent='';this.listeners=new Map();this.span={textContent:''};this.open=false;}
   addEventListener(type,fn){if(!this.listeners.has(type))this.listeners.set(type,[]);this.listeners.get(type).push(fn);}
   fire(type,target=this){
    const event={target,preventDefault(){}};
@@ -43,18 +45,23 @@ function runtime({includePobs=false,age=600000,telemetry={},reply=async()=>fresh
   }
   querySelector(){return this.span;}
   reportValidity(){return true;}
+  showModal(){this.open=true;}
+  close(){this.open=false;this.fire('close');}
  }
  const node=id=>{if(!elements.has(id))elements.set(id,new Element(id));return elements.get(id);};
  const win={addEventListener(){},DTRApp:{validateTelemetry,
   getState(){return {view:'overview',mode:'none',...telemetry};}}};
  const box={console,Intl,Date,Map,Set,AbortController,URLSearchParams,JSON,
-  window:win,document:{readyState:'loading',getElementById:node,querySelectorAll(){return[];},addEventListener(){}},
+  window:win,document:{readyState:'loading',getElementById:node,querySelectorAll(){return[];},addEventListener(){},
+   body:{classList:{add(){},remove(){}}}},
   localStorage:{getItem:key=>storage.get(key)??null,setItem:(key,value)=>storage.set(key,value)},
   setTimeout(){return 1;},clearTimeout(){},
-  normalizeDarkstat,groupRoutes,findPlanetCrete,enrichBaseOwners,assessAccess,setLaneSpeed,LANE_SPEED,CORSAIR_ID_NICKNAME,
-  FALLBACK_SHIPS:[profile],DEFAULT_SHIP_ID:profile.id,verifyShipProfile:()=>true,
-  blockedShipDocks:()=>[],dockEligibility:()=> 'allowed',validateNavigation:value=>value,
-  createShipController:()=>({getCurrent:()=>profile}),
+  normalizeDarkstat,groupRoutes,findPlanetCrete,enrichBaseOwners,assessAccess,verifiedCorsairIds,setLaneSpeed,LANE_SPEED,CORSAIR_ID_NICKNAME,
+  FALLBACK_SHIPS:[profile],DEFAULT_SHIP_ID:profile.id,verifyShipProfile,
+  blockedShipDocks,dockEligibility,validateNavigation:value=>value,
+  createShipController:()=>({getCurrent:()=>profile,getRegistryStatus:()=>({mode:'test'}),getFavorites:()=>[]}),
+  seedFactions:ownerFactions,seedIds:ids,seedNavigation:nav||{nodes:market.bases.map(base=>({id:base.id,allows:['medium']})),
+   baseNodes:Object.fromEntries(market.bases.map(base=>[base.id,base.id]))},
   Worker:class{
    constructor(){workers.push(this);}
    postMessage(value){messages.push(value);}
@@ -70,17 +77,20 @@ function runtime({includePobs=false,age=600000,telemetry={},reply=async()=>fresh
   cacheWrite=async value=>{snapshots.push(JSON.parse(JSON.stringify(value)));};
   bind();
   globalThis.audit={
-   seed(value,at){dataset=value;navigation={nodes:[]};loadedAt=${now-600000};pobLoadedAt=at;
+   seed(value,at){dataset=value;navigation=seedNavigation;loadedAt=${now-600000};pobLoadedAt=at;
+    factions=seedFactions;corsairIds=seedIds;idLoadedAt=${now-600000};idDataMode='cached';ownerDataMode='cached';
     startId='crete';dataMode='live';syncAccess();},
    setResults(value,running=false){results=value;lastStats={checked:1};busy=running;renderResults();},
-   renderResults,refreshPobMarket,
-   inspect:()=>({dataset,busy,resultCount:results.length,lastStats,pobLoadedAt})
+   renderResults,refreshPobMarket,renderPicker,selectOrigin,openDetail,accessTag,
+   inspect:()=>({dataset,busy,resultCount:results.length,lastStats,pobLoadedAt,access,idLoadedAt,idDataMode,ownerDataMode})
   };`,box);
  for(const [id,value] of Object.entries({dtrRoutesCargo:'1000',dtrRoutesCapital:'5000000',dtrRoutesMaxTime:'60',
   dtrRoutesLegs:'auto',dtrRoutesReturn:'system',dtrRoutesDepth:'18',dtrRoutesSort:'hourly'}))node(id).value=value;
- node('dtrRoutesPobs').checked=includePobs;node('dtrRoutesCorsair').checked=false;
+ node('dtrRoutesPobs').checked=includePobs;node('dtrRoutesCorsair').checked=corsair;
+ node('dtrRoutesUnverified').checked=includeUnverified;
  node('dtrRoutesSort').parent=node('tradeRoutesView');node('dtrRoutesCargo').parent=node('tradeRoutesView');
- box.audit.seed(initial,now-age);
+ for(const id of ['dtrRoutesCorsair','dtrRoutesUnverified','dtrRoutesPobs'])node(id).parent=node('tradeRoutesView');
+ box.audit.seed(market,now-age);
  return {audit:box.audit,app:win.DTRTradeRoutes,node,apiCalls,messages,workers,snapshots};
 }
 
@@ -164,4 +174,98 @@ assert.deepEqual(manual.apiCalls,['pobs','commodities','npc_bases','factions','t
  'the explicit force-market action must still refresh the full market');
 assert.equal(manual.audit.inspect().dataset.bases.find(base=>base.id==='crete').offers[0].buy,32);
 
-console.log('DTR market runtime passed (sort bubbling, NPC stability, POB-only refresh/reuse, limits, caching, failure and concurrency).');
+// Use the public API capture to test the actual controller -> worker -> manifest
+// boundary. The worker is deliberately made to return prohibited stops so that
+// a stale/mismatched worker cannot silently reintroduce them into the UI.
+const dockFixture=JSON.parse(await readFile(new URL('./fixtures/corsair-docking-2026-10-26.json',import.meta.url),'utf8'));
+const deniedIds=dockFixture.bases.map(row=>row.base_nickname);
+const dockingMarket={...initial,bases:[npc('crete','Planet Crete','gamma'),npc('buyer','Friendly Buyer','gamma'),
+ ...dockFixture.bases.map(row=>({...npc(row.base_nickname,row.base_name,'gamma'),factionName:row.faction_name})),
+ npc('ring-only','Ring-only Station','gamma'),npc('unknown-ship','Unknown Ship Dock','gamma'),
+ {id:'private-pob',name:'Private POB',kind:'pob',system:'gamma',offers:[]}
+]};
+const dockingNav={schema:1,nodes:dockingMarket.bases.filter(base=>base.id!=='unknown-ship').map((base,i)=>({
+ id:base.id,kind:'base',system:'gamma',pos:[i*1000,0,0],allows:base.id==='ring-only'?['berth']:['medium']
+})),links:[],baseNodes:Object.fromEntries(dockingMarket.bases.filter(base=>base.id!=='unknown-ship').map(base=>[base.id,base.id])),systemMultipliers:{}};
+const dockingOptions={corsair:true,market:dockingMarket,ownerFactions:dockFixture.factions,ids:[dockFixture.id],nav:dockingNav};
+for(const includeUnverified of [false,true]){
+ const env=runtime({...dockingOptions,includeUnverified});
+ await env.app.runSearch();
+ const request=env.messages.at(-1);
+ assert.equal(request.type,'search');
+ for(const id of deniedIds)assert(request.options.blocked.includes(id),id+' must reach the worker as blocked');
+ assert(request.options.blocked.includes('ring-only'),'unknown docking opt-in never bypasses an incompatible ship');
+ assert.equal(request.options.blocked.includes('unknown-ship'),!includeUnverified);
+ env.audit.renderPicker('thebes');
+ assert.match(env.node('dtrRoutesPickerList').innerHTML,/data-route-start-id="st08_01_base"[^>]*disabled/,
+  'the same Order prohibition must also disable the start picker');
+ env.audit.selectOrigin('st08_01_base');
+ assert.equal(env.app.getState().startId,'crete','a blocked Order station cannot become the starting base');
+ env.audit.selectOrigin('ring-only');assert.equal(env.app.getState().startId,'crete');
+ const returned=[route('buyer',100,1000),route('st08_01_base',9999,99999),route('li12_07_base',8888,88888),
+  route('ring-only',7777,77777),route('unknown-ship',300,3000),route('not-in-dataset',400,4000),
+  route('private-pob',500,5000),null,{legs:[null]}];
+ env.workers[0].onmessage({data:{id:request.id,type:'result',result:{results:returned,stats:{partial:true}}}});
+ assert.equal(env.audit.inspect().resultCount,includeUnverified?2:1,
+  'only currently permitted worker results may reach the displayed routes');
+ assert.match(env.node('dtrRoutesNotice').textContent,/DOCKING WERE REMOVED/);
+ assert(!/Thebes|Cochrane|Ring-only/.test(env.node('dtrRoutesResults').innerHTML));
+ env.audit.openDetail(0);assert(env.node('dtrRoutesDetailDialog').open);
+ if(includeUnverified){
+  assert.match(env.audit.accessTag('unknown-ship'),/SHIP DOCKING UNVERIFIED/,
+   'unknown physical access must not be displayed as likely just because ID reputation permits it');
+ }
+ env.node('dtrRoutesCorsair').checked=false;env.node('dtrRoutesCorsair').fire('change');
+ assert.equal(env.node('dtrRoutesDetailDialog').open,false,'changing filters must close the now-stale manifest');
+ assert.equal(env.audit.inspect().resultCount,0);
+}
+
+const otherId=runtime({...dockingOptions,corsair:false});
+otherId.node('dtrRoutesUnknown').checked=true;
+await otherId.app.runSearch();
+for(const id of deniedIds)assert(!otherId.messages.at(-1).options.blocked.includes(id),'Corsair OFF preserves other-ID searches');
+assert(otherId.messages.at(-1).options.blocked.includes('ring-only'),'Corsair OFF and unknown flight time do not bypass physical ship restrictions');
+assert(otherId.messages.at(-1).options.blocked.includes('unknown-ship'),'unknown flight time is not consent to unknown docking');
+const oldRequest=otherId.messages.at(-1);
+otherId.node('dtrRoutesCorsair').checked=true;otherId.node('dtrRoutesCorsair').fire('change');
+otherId.workers[0].onmessage({data:{id:oldRequest.id,type:'result',result:{results:[route('li12_07_base',100,1000)],stats:{}}}});
+assert.equal(otherId.audit.inspect().resultCount,0,'turning Corsair ON must reject the previous worker response');
+
+const unknownOrigin=runtime({...dockingOptions,corsair:false});
+unknownOrigin.audit.selectOrigin('unknown-ship');
+assert.equal(unknownOrigin.app.getState().startId,'crete');
+unknownOrigin.node('dtrRoutesUnverified').checked=true;unknownOrigin.node('dtrRoutesUnverified').fire('change');
+unknownOrigin.audit.selectOrigin('unknown-ship');
+assert.equal(unknownOrigin.app.getState().startId,'unknown-ship','unknown physical access is selectable only with explicit opt-in');
+
+const marketGoods=dockingMarket.bases.filter(base=>base.kind==='npc').map(base=>({
+ base_nickname:base.id,base_name:base.name,system_nick:base.system,system_name:base.systemName,
+ base_sells:true,price_base_sells_for:10,price_base_buys_for:20,volume:1
+}));
+for(const brokenIdReply of [null,[{nickname:'fc_c_grp',reputations:[{nickname:'fc_lh_grp',rep:0.9}]}],
+ [{...dockFixture.id,rephacks:[...dockFixture.id.rephacks,{faction_nickname:'fc_or_grp',reputation:0.5,rep_type:0}]}]]){
+ const cached=runtime({...dockingOptions,reply:async path=>{
+  if(path==='pobs')return freshPobs;
+  if(path==='commodities')return [{nickname:'commodity_test',name:'Test Goods',volume:1,market_goods:marketGoods}];
+  if(path==='npc_bases')throw Error('Owner metadata unavailable');
+  if(path==='factions')return [];
+  if(path==='tractors')return brokenIdReply;
+  throw Error('Unexpected endpoint '+path);
+ }});
+ const previousIdTime=cached.audit.inspect().idLoadedAt;
+ assert.equal(await cached.app.marketRefresh(),true,'valid new prices may load while docking metadata is unavailable');
+ const state=cached.audit.inspect();
+ assert.equal(state.idDataMode,'cached');assert.equal(state.ownerDataMode,'cached');
+ assert.equal(state.idLoadedAt,previousIdTime,'a failed ID response must not falsely advance ID freshness');
+ assert.equal(cached.snapshots.at(-1).idLoadedAt,previousIdTime);
+ assert.equal(cached.snapshots.at(-1).corsairIds[0].rephacks.length,81);
+ for(const id of deniedIds)assert(state.access.blocked.includes(id),'previously known restrictions must survive a metadata outage');
+ assert.match(cached.node('dtrRoutesAccessNote').textContent,/CACHED CORSAIR ID RULES/);
+ await cached.app.runSearch();
+ for(const id of deniedIds)assert(cached.messages.at(-1).options.blocked.includes(id));
+ assert.match(cached.node('dtrRoutesNotice').textContent,/CACHED NPC OWNERS/);
+}
+const noId=runtime({...dockingOptions,ids:[]});await noId.app.runSearch();
+assert.equal(noId.messages.length,0,'faction metadata alone must never authorize a strict Corsair search');
+
+console.log('DTR market/docking runtime passed (sort, POB freshness, all captured Order/Lane Hacker stops, worker screening, picker, manifests, physical/unknown docks, metadata fallback and filter races).');

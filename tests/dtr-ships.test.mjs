@@ -89,6 +89,8 @@ const large=findProfile(ships,'ship:pilgrim_liner');
 assert.deepEqual(blockedShipDocks(names,ring,nav),['mid','large']);
 assert.deepEqual(blockedShipDocks(names,mid,nav),['ring','large']);
 assert.deepEqual(blockedShipDocks(names,large,nav),['ring','mid']);
+assert.deepEqual(blockedShipDocks([...names,{id:'unmapped'}],mid,nav,{blockUnknown:true}),
+ ['ring','large','unknown','unmapped'],'unknown ship docks need their own explicit opt-in');
 assert.equal(dockEligibility('unknown',mid,nav),'unknown','missing docking spheres must not claim permission');
 assert.equal(dockEligibility('missing',mid,nav),'unknown','unmapped POBs must remain unverified');
 const ringNav=new Navigator(nav,[],ring,{charge:0,lane:0});
@@ -107,7 +109,7 @@ assert(partial.includes('id="dtrRoutesCustomDelete"'),'custom profiles must be r
 assert(partial.includes('id="dtrRoutesCargo"')&&partial.includes('form="dtrRoutesForm"'),'available cargo must be independently editable');
 assert(!partial.includes('data-dtr-cargo="freighter-'),'legacy generic cargo cards must be removed');
 assert(route.includes("import { createShipController }"),'trade runtime should use controller');
-assert(route.includes("blockedShipDocks(dataset.bases,profile,navigation)"),'ship-specific physical dock blocking is mandatory');
+assert(route.includes("blockedShipDocks(dataset?.bases||[],profile,navigation,"),'ship-specific physical dock blocking is mandatory');
 assert(route.includes("dockEligibility(origin.id,profile,navigation)==='blocked'"),'origin must respect selected ship type');
 assert(route.includes("readJson('ships',{},controller.signal)")||controller.includes("readJson('ships',{},controller.signal)"),'API ship registry must be fetched');
 assert(controller.includes('getRegistryStatus'),'ship catalogue source must be distinguishable');

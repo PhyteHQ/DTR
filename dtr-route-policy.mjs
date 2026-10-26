@@ -13,10 +13,16 @@ export const normalize = value => String(value??'').normalize('NFD')
   .replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 const CORSAIR_NO_DOCK_IDS = new Set(['li01_01_base','ew16_01_base'].map(normalize));
 const first=(obj,...keys)=>keys.map(k=>obj?.[k]).find(v=>v!==null&&v!==undefined&&v!=='');
+const text=value=>typeof value==='string'?value.trim():'';
 const repNumber=value=>{
-  if(value===undefined||value===null||value==='')return null;
+  if(!['number','string'].includes(typeof value)||String(value).trim()==='')return null;
   const num=Number(value);
   return Number.isFinite(num)&&num>=-1&&num<=1?num:null;
+};
+const repMode=value=>{
+  if(!['number','string'].includes(typeof value)||String(value).trim()==='')return null;
+  const mode=Number(value);
+  return Number.isInteger(mode)&&mode>=0&&mode<=3?mode:null;
 };
 const idOf=x=>String(first(x,'nickname','base_nickname','id')??'');
 
@@ -52,32 +58,47 @@ export function enrichBaseOwners(dataset,npcBases=[],pobs=[]){
  *  Factions only provide names -> nicknames; their .reputations are NOT used.
  *  Unknown/invalid/missing ID data is not permission to dock. */
 export function reputationIndex(factions,tractors=[]){
-  const names=new Map(),relation=new Map();
+  const names=new Map(),relation=new Map(),ambiguousNames=new Set(),seen=new Set();
+  const addName=(name,code)=>{
+    const key=normalize(text(name));
+    if(!key||ambiguousNames.has(key))return;
+    const previous=names.get(key);
+    if(previous&&normalize(previous)!==normalize(code)){
+      names.delete(key);ambiguousNames.add(key);
+    }else names.set(key,code);
+  };
   for(const faction of Array.isArray(factions)?factions:[]){
-    const id=first(faction,'nickname');
+    const id=text(faction?.nickname);
     if(!id)continue;
-    names.set(normalize(id),String(id));
-    if(faction.name)names.set(normalize(faction.name),String(id));
+    addName(id,id);addName(faction.name,id);
   }
-  const id=(Array.isArray(tractors)?tractors:[])
-    .find(row=>normalize(row?.nickname)===normalize(CORSAIR_ID_NICKNAME));
+  const matches=(Array.isArray(tractors)?tractors:[])
+    .filter(row=>normalize(text(row?.nickname))===normalize(CORSAIR_ID_NICKNAME));
+  const id=matches.length===1?matches[0]:null;
   if(!id||!Array.isArray(id.rephacks)||!id.rephacks.length)
-    return {ready:false,names,relation,source:null,ruleCount:0};
+    return {ready:false,names,ambiguousNames,relation,source:null,ruleCount:0};
   for(const row of id.rephacks){
-    const nick=first(row,'faction_nickname');
-    const value=repNumber(row?.reputation),mode=Number(row?.rep_type);
-    if(!nick||value===null||!Number.isInteger(mode)||mode<0||mode>3)continue;
-    const code=String(nick);
-    names.set(normalize(code),code);
-    if(row.faction_name)names.set(normalize(row.faction_name),code);
+    const code=text(row?.faction_nickname),key=normalize(code);
+    if(!key)continue;
+    addName(code,code);addName(row.faction_name,code);
     // Missing, duplicate or explicitly unmodified groups never grant access.
-    if(relation.has(normalize(code))){
-      relation.delete(normalize(code));
-      continue;
-    }
-    relation.set(normalize(code),{value,mode});
+    if(seen.has(key)){relation.delete(key);continue;}
+    seen.add(key);
+    const value=repNumber(row?.reputation),mode=repMode(row?.rep_type);
+    if(value===null||mode===null)continue;
+    relation.set(key,{value,mode});
   }
-  return {ready:relation.size>0,names,relation,source:CORSAIR_ID_NICKNAME,ruleCount:relation.size};
+  return {ready:relation.size>0,names,ambiguousNames,relation,source:CORSAIR_ID_NICKNAME,ruleCount:relation.size};
+}
+
+// Validate a complete ID response before replacing the last usable snapshot.
+// This checks API shape and rule semantics, not a character's in-game access.
+export function verifiedCorsairIds(tractors){
+  const matches=(Array.isArray(tractors)?tractors:[])
+    .filter(row=>normalize(text(row?.nickname))===normalize(CORSAIR_ID_NICKNAME));
+  if(matches.length!==1)return null;
+  const index=reputationIndex([],matches);
+  return index.ready&&index.ruleCount===matches[0].rephacks?.length?matches:null;
 }
 
 export function baseAccess(base,corsairEnabled,index){
@@ -89,28 +110,31 @@ export function baseAccess(base,corsairEnabled,index){
       (system==='new york'||system.includes('manhattan atmosphere')||name.includes('landing site'))))
     return {state:'restricted',reason:'KNOWN CORSAIR NO-DOCK // MANHATTAN OR LANDING SITE'};
   if(base.kind==='pob')return {state:'unverified',reason:'POB WHITELIST / OWNER RULES UNKNOWN'};
-  const owner=first(base,'factionNickname','factionName');
+  const ownerId=text(base.factionNickname),owner=ownerId||text(base.factionName);
   if(!owner)return {state:'unverified',reason:'FACTION OWNER NOT REPORTED'};
-  const nickname=index?.names?.get(normalize(owner))||String(owner);
+  const canonical=ownerId&&index?.relation?.has(normalize(ownerId));
+  if(!canonical&&index?.ambiguousNames?.has(normalize(owner)))
+    return {state:'unverified',reason:'FACTION OWNER NAME IS AMBIGUOUS'};
+  const nickname=canonical?ownerId:index?.names?.get(normalize(owner))||owner;
   const rule=index?.relation?.get(normalize(nickname));
   if(!rule)return {state:'unverified',reason:'NO CORSAIR ID REPHACK FOR BASE OWNER'};
   const {value,mode}=rule;
   if(mode===REP_MODE.UNCHANGED)
     return {state:'unverified',reason:'CORSAIR ID DOES NOT CHANGE THIS REPUTATION'};
   if(mode===REP_MODE.MAX){
-    if(value<DOCK_HOSTILE_THRESHOLD)return {state:'restricted',score:value,repType:mode,
+    if(value<=DOCK_HOSTILE_THRESHOLD)return {state:'restricted',score:value,repType:mode,
       reason:'CORSAIR ID MAXIMUM REP IS HOSTILE // DOCKING NOT POSSIBLE WITH THIS ID'};
     return {state:'likely',score:value,repType:mode,
       reason:'CORSAIR ID MAXIMUM PERMITS DOCKING // ACTUAL CHARACTER REP MAY BE LOWER'};
   }
   if(mode===REP_MODE.MIN){
-    if(value>=DOCK_HOSTILE_THRESHOLD)return {state:'likely',score:value,repType:mode,
+    if(value>DOCK_HOSTILE_THRESHOLD)return {state:'likely',score:value,repType:mode,
       reason:'CORSAIR ID MINIMUM REP ABOVE DOCK THRESHOLD // OTHER RESTRICTIONS POSSIBLE'};
     return {state:'unverified',score:value,repType:mode,
-      reason:'CORSAIR ID MINIMUM IS BELOW DOCK THRESHOLD // ACTUAL REP UNKNOWN'};
+      reason:'CORSAIR ID MINIMUM IS AT OR BELOW DOCK THRESHOLD // ACTUAL REP UNKNOWN'};
   }
   if(mode===REP_MODE.STATIC){
-    return value<DOCK_HOSTILE_THRESHOLD?
+    return value<=DOCK_HOSTILE_THRESHOLD?
       {state:'restricted',score:value,repType:mode,reason:'CORSAIR ID FIXED REP IS HOSTILE'}:
       {state:'likely',score:value,repType:mode,reason:'CORSAIR ID FIXED REP PERMITS DOCKING // OTHER RESTRICTIONS POSSIBLE'};
   }

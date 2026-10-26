@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import {
   CORSAIR_ID_NICKNAME,DOCK_HOSTILE_THRESHOLD,REP_MODE,LANE_SPEED,
-  findPlanetCrete,enrichBaseOwners,reputationIndex,baseAccess,assessAccess,setLaneSpeed
+  findPlanetCrete,enrichBaseOwners,reputationIndex,verifiedCorsairIds,baseAccess,assessAccess,setLaneSpeed
 } from '../dtr-route-policy.mjs';
 
 assert.equal(CORSAIR_ID_NICKNAME,'dsy_license_fc_c_grp');
@@ -85,6 +86,8 @@ assert.equal(assessAccess(owned,false,factions,ids).blocked.length,0,
   'other faction players can turn Corsair ID filtering off');
 
 assert.equal(baseAccess({kind:'npc',factionName:'Lane Hackers'},true,index).state,'restricted');
+assert.equal(baseAccess({kind:'npc',factionNickname:'Lane Hackers'},true,index).state,'restricted',
+ 'legacy faction fields containing a display name must still resolve to the actual ID rule');
 assert.equal(baseAccess({kind:'npc',factionName:'Lane Hackers'},true,reputationIndex([],carrier)).state,'restricted',
   'ID reps must identify faction names even when the faction metadata endpoint is unavailable');
 assert.equal(baseAccess({kind:'pob',factionName:'Corsairs'},true,index).state,'unverified');
@@ -100,6 +103,41 @@ assert.equal(baseAccess(ownedTest,true,singleRule(1,-0.7)).state,'unverified','m
 assert.equal(baseAccess(ownedTest,true,singleRule(2,0.2)).state,'unverified','unchanged does not prove reputation');
 assert.equal(baseAccess(ownedTest,true,singleRule(3,-0.7)).state,'restricted','fixed hostile');
 assert.equal(baseAccess(ownedTest,true,singleRule(3,0.5)).state,'likely','fixed permitted');
+for(const [value,expected] of [
+ [-0.55001,['restricted','unverified','unverified','restricted']],
+ [-0.55,['restricted','unverified','unverified','restricted']],
+ [-0.54999,['likely','likely','unverified','likely']]
+])for(const mode of [0,1,2,3]){
+ assert.equal(baseAccess(ownedTest,true,singleRule(mode,value)).state,expected[mode],
+  'Discovery refuses docking at exactly -0.55; a minimum at that boundary cannot prove access');
+}
+for(const invalid of [null,undefined,'','  ',false,true,[],{},'not-a-number',Infinity]){
+ assert.equal(baseAccess(ownedTest,true,singleRule(invalid,0.5)).state,'unverified',
+  'malformed rep modes must not be coerced into a maximum-reputation rule');
+ assert.equal(baseAccess(ownedTest,true,singleRule(0,invalid)).state,'unverified',
+  'malformed reputation values must not be coerced into neutral access');
+}
+assert.equal(baseAccess(ownedTest,true,singleRule('0','-0.55')).state,'restricted');
+for(const duplicates of [2,3,4]){
+ const repeated={nickname:CORSAIR_ID_NICKNAME,rephacks:Array.from({length:duplicates},()=>hack('test_grp',0.5,0,'Test Group'))};
+ assert.equal(baseAccess(ownedTest,true,reputationIndex([],[repeated])).state,'unverified',
+  'a third duplicate must not re-authorize a group invalidated by duplicates');
+ assert.equal(verifiedCorsairIds([repeated]),null,'ambiguous snapshots cannot replace usable cached ID rules');
+}
+assert.equal(reputationIndex([], [corsairId,{...corsairId}]).ready,false,'two matching IDs are ambiguous');
+assert.equal(verifiedCorsairIds([corsairId,{...corsairId}]),null);
+assert.equal(verifiedCorsairIds(null),null);
+assert.deepEqual(verifiedCorsairIds([{nickname:'unrelated'},corsairId]),[corsairId]);
+const ambiguousIndex=reputationIndex([
+ {nickname:'fc_lh_grp',name:'Shared Owner'}, {nickname:'friendly_grp',name:'Shared Owner'}
+],[{nickname:CORSAIR_ID_NICKNAME,rephacks:[
+ hack('fc_lh_grp',-0.7,0,'Shared Owner'),hack('friendly_grp',0.5,0,'Shared Owner')
+]}]);
+assert.equal(baseAccess({kind:'npc',factionName:'Shared Owner'},true,ambiguousIndex).state,'unverified',
+ 'duplicate faction display names must never silently resolve to the friendlier owner');
+assert.equal(baseAccess({kind:'npc',factionName:'Shared Owner',factionNickname:'fc_lh_grp'},true,ambiguousIndex).state,'restricted',
+ 'an explicit canonical owner ID remains authoritative when display names collide');
+assert.equal(baseAccess({kind:'npc',factionNickname:{}},true,index).state,'unverified');
 assert.equal(reputationIndex([], [{nickname:CORSAIR_ID_NICKNAME,rephacks:[
   hack('test_grp',0.1,7,'Test Group')
 ]}]).ready,false,'invalid rep types are not authorized');
@@ -134,4 +172,22 @@ const nav=setLaneSpeed({schema:1,nodes:[],links:[
 assert.equal(nav.links[0].speed,2500);
 assert.equal(nav.links[1].speed,undefined);
 assert.throws(()=>setLaneSpeed({links:[]},0));
-console.log('DTR Corsair ID reputation test passed (real ID semantics, hostile Lane Hackers, Ontario, modes 0-3, unknown and Manhattan).');
+const captured=JSON.parse(await readFile(new URL('./fixtures/corsair-docking-2026-10-26.json',import.meta.url),'utf8'));
+assert.equal(captured.id.rephacks.length,81);
+assert.equal(verifiedCorsairIds([captured.id])?.[0],captured.id);
+const capturedBases=captured.bases.map(row=>({id:row.base_nickname,name:row.base_name,kind:'npc'}));
+for(const nicknameOwners of [false,true])for(const includeUnverified of [false,true]){
+ const owners=captured.bases.map(row=>({...row,...(!nicknameOwners?{faction_nick:undefined}:{})}));
+ const enriched=enrichBaseOwners({bases:capturedBases},owners);
+ const access=assessAccess(enriched,true,captured.factions,{tractors:[captured.id],includeUnverified});
+ assert.equal(access.ruleCount,81);
+ assert.equal(access.blocked.length,11,'all six captured Order and five Lane Hacker bases must be excluded');
+ assert(enriched.every(base=>access.byId.get(base.id)?.state==='restricted'));
+ assert.equal(assessAccess(enriched,false,captured.factions,{tractors:[captured.id]}).blocked.length,0);
+}
+const capturedIndex=reputationIndex(captured.factions,[captured.id]);
+for(const nickname of ['fc_or_grp','fc_lh_grp','co_shi_grp','ga_gms_grp','ga_p_grp','ga_idf_grp','ga_efl_grp','fc_rn_grp','fc_ai_grp']){
+ assert.equal(baseAccess({kind:'npc',factionNickname:nickname},true,capturedIndex).state,'restricted',
+  nickname+' must obey its actual maximum/static ID restriction, including exactly -0.55');
+}
+console.log('DTR docking policy passed (81 captured ID rules, all Order/Lane Hacker examples, inclusive threshold, modes, malformed/duplicate data, owner ambiguity and opt-in).');

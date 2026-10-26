@@ -83,7 +83,7 @@
                 <label class="dtr-routes-check"><input id="dtrRoutesMixed" type="checkbox" checked> <span>OPTIMIZE MIXED CARGO ON SAME FLIGHT</span></label>
                 <label class="dtr-routes-check"><input id="dtrRoutesEmpty" type="checkbox"> <span>ALLOW EMPTY RETURN FLIGHT</span></label>
                 <label class="dtr-routes-check"><input id="dtrRoutesUnknown" type="checkbox"> <span>ALLOW ROUTES WITH UNKNOWN FLIGHT TIME</span></label>
-                <label class="dtr-routes-check dtr-routes-unsafe"><input id="dtrRoutesUnverified" type="checkbox"> <span>INCLUDE UNVERIFIED DOCKS (AT YOUR OWN RISK)<small>OFF BY DEFAULT // PRIVATE POBS MAY REQUIRE WHITELIST // KNOWN NO-DOCK BASES STAY BLOCKED</small></span></label>
+                <label class="dtr-routes-check dtr-routes-unsafe"><input id="dtrRoutesUnverified" type="checkbox"> <span>INCLUDE UNVERIFIED DOCKS (AT YOUR OWN RISK)<small>OFF BY DEFAULT // INCLUDES UNKNOWN SHIP DOCKING AND PRIVATE POB ACCESS // KNOWN NO-DOCK BASES STAY BLOCKED</small></span></label>
                 <label class="dtr-routes-field"><span>SEARCH DEPTH</span><select id="dtrRoutesDepth"><option value="18">STANDARD</option><option value="45">EXTENDED</option></select></label>
               </div>
             </details>
@@ -123,7 +123,7 @@
         <div class="dtr-routes-picker-list" id="dtrRoutesPickerList"></div>
       </dialog>
       <dialog id="dtrRoutesDetailDialog" class="dtr-routes-dialog dtr-routes-detail" aria-labelledby="dtrRoutesDetailTitle">
-        <header><div><small>TRADE ROUTES // VERIFIED MANIFEST</small><h3 id="dtrRoutesDetailTitle">Route Details</h3></div><button type="button" data-route-close="dtrRoutesDetailDialog" aria-label="Close">✕</button></header>
+        <header><div><small>TRADE ROUTES // ROUTE MANIFEST</small><h3 id="dtrRoutesDetailTitle">Route Details</h3></div><button type="button" data-route-close="dtrRoutesDetailDialog" aria-label="Close">✕</button></header>
         <div id="dtrRoutesDetailBody"></div>
       </dialog>
     </section>

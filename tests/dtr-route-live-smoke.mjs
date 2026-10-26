@@ -1,5 +1,6 @@
 import { normalizeDarkstat } from '../trade-core/trade.mjs';
-import { findPlanetCrete, enrichBaseOwners, assessAccess, CORSAIR_ID_NICKNAME, REP_MODE } from '../dtr-route-policy.mjs';
+import { findPlanetCrete, enrichBaseOwners, assessAccess, reputationIndex, verifiedCorsairIds, DOCK_HOSTILE_THRESHOLD, CORSAIR_ID_NICKNAME, REP_MODE, normalize } from '../dtr-route-policy.mjs';
+import {blockedShipDocks,dockEligibility,FALLBACK_SHIPS,DEFAULT_SHIP_ID} from '../dtr-ship-profiles.mjs';
 import {readFile} from 'node:fs/promises';
 import {runInNewContext} from 'node:vm';
 const API='https://darkstat.dd84ai.com/api';
@@ -34,18 +35,34 @@ else{
   ds.bases=enrichBaseOwners(ds,npcs.status==='fulfilled'?npcs.value:[],pobs.value);
   const candidates=ds.bases.filter(x=>/crete/i.test(x.name||'')).map(x=>({id:x.id,name:x.name,system:x.systemName,kind:x.kind}));
   const origin=findPlanetCrete(ds.bases);
-  const liveIds=idFeed.status==='fulfilled'?idFeed.value:[];
+  const liveIds=verifiedCorsairIds(idFeed.status==='fulfilled'?idFeed.value:[])||[];
   const ac=assessAccess(ds.bases,true,factions.status==='fulfilled'?factions.value:[],
     {tractors:liveIds});
   const corsairId=liveIds.find(x=>x.nickname===CORSAIR_ID_NICKNAME);
   const laneHack= corsairId?.rephacks?.find(x=>x.faction_nickname==='fc_lh_grp');
+  const orderRule=corsairId?.rephacks?.find(x=>x.faction_nickname==='fc_or_grp');
   console.log('DTR CORSAIR ID VERIFICATION '+JSON.stringify({
-    source:ac.idSource,ready:ac.indexReady,rules:ac.ruleCount,laneHackersRephack:laneHack
+    source:ac.idSource,ready:ac.indexReady,rules:ac.ruleCount,laneHackersRephack:laneHack,orderRephack:orderRule
   }));
   if(!ac.indexReady||!laneHack||laneHack.rep_type!==REP_MODE.MAX||
-      laneHack.reputation >= -0.55){
+      laneHack.reputation > DOCK_HOSTILE_THRESHOLD){
     console.error('CORSAIR ID REPHACKS MISSING OR LANE HACKER HOSTILITY NOT ACTIVE');
     process.exitCode=1;
+  }
+  const liveIndex=reputationIndex(factions.status==='fulfilled'?factions.value:[],liveIds);
+  const deniedOwners=new Set((corsairId?.rephacks||[]).filter(rule=>
+    [REP_MODE.MAX,REP_MODE.STATIC].includes(rule.rep_type)&&rule.reputation<=DOCK_HOSTILE_THRESHOLD
+  ).map(rule=>normalize(rule.faction_nickname)));
+  const ownerId=base=>normalize(base.factionNickname||liveIndex.names.get(normalize(base.factionName))||'');
+  const allDenied=ds.bases.filter(base=>base.kind==='npc'&&deniedOwners.has(ownerId(base)));
+  const violations=allDenied.filter(base=>ac.byId.get(base.id)?.state!=='restricted'||!ac.blocked.includes(base.id));
+  const focused=allDenied.filter(base=>['fc or grp','fc lh grp'].includes(ownerId(base)));
+  console.log('DTR ALL NPC ID DOCKING AUDIT '+JSON.stringify({
+    deniedOwnerCount:deniedOwners.size,expectedDeniedBases:allDenied.length,violations:violations.map(base=>base.id),
+    orderAndLaneHackers:focused.map(base=>({id:base.id,name:base.name,owner:base.factionName,state:ac.byId.get(base.id)?.state}))
+  }));
+  if(violations.length||!focused.some(base=>ownerId(base)==='fc or grp')){
+    console.error('Known hostile/capped NPC owners must all be filtered, including Order at -0.55');process.exitCode=1;
   }
   const cochrane=ds.bases.find(b=>b.id==='li12_07_base');
   const cochraneAccess=cochrane?ac.byId.get(cochrane.id):null;
@@ -83,19 +100,19 @@ else{
       const { gunzipSync } = await import('node:zlib');
       const { readFile } = await import('node:fs/promises');
       const { search } = await import('../trade-core/search.mjs');
-      const { PROFILES } = await import('../trade-core/trade.mjs');
       const { setLaneSpeed } = await import('../dtr-route-policy.mjs');
       const nav = setLaneSpeed(JSON.parse(gunzipSync(await readFile(new URL('../trade-core/data/navigation.json.gz',import.meta.url))).toString('utf8')));
-      const profile=PROFILES.find(p=>p.cargo===5000);
-      const options={mode:'auto',start:origin.id,cargo:5000,capital:5000000,
-        excludePobs:true,blocked:ac.blocked,allowUnknownTime:false,
+      const profile=FALLBACK_SHIPS.find(p=>p.id===DEFAULT_SHIP_ID);
+      const shipBlocked=blockedShipDocks(ds.bases,profile,nav,{blockUnknown:true});
+      const options={mode:'auto',start:origin.id,cargo:profile.cargo,capital:5000000,
+        excludePobs:true,blocked:[...new Set([...ac.blocked,...shipBlocked])],allowUnknownTime:false,
         returnScope:'system',returnSystem:'',flexiblePickups:true,
         allowEmptyReturn:false,mixedCargo:true,maxMinutes:60,sort:'hourly',
         breadth:18,searchMs:12000,mixedMs:3500,maxChecks:8000,
         timeModel:{dock:30,jump:15,lane:10,charge:5}};
       const found=await search(ds,nav,profile,options);
       const violation=found.results.flatMap(r=>r.legs.flatMap(l=>[l.source,l.target]))
-        .filter(id=>ac.byId.get(id)?.state!=='likely');
+        .filter(id=>ac.byId.get(id)?.state!=='likely'||dockEligibility(id,profile,nav)!=='allowed');
       if(violation.length){
         console.error('CORSAIR STRICT ROUTES CONTAIN UNVERIFIED OR RESTRICTED DOCKING',violation.slice(0,12));
         process.exitCode=1;

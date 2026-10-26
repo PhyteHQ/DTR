@@ -345,7 +345,7 @@ body{margin:0;background:#050506}
       <tr><td>Optimize mixed cargo</td><td>Allow several goods on one leg (on by default).</td></tr>
       <tr><td>Allow empty return flight</td><td>Accept routes where one leg carries nothing.</td></tr>
       <tr><td>Allow unknown flight time</td><td>Include routes the planner cannot time.</td></tr>
-      <tr><td>Include unverified docks</td><td>At your own risk: includes bases where docking cannot be confirmed. Known no-dock bases stay blocked.</td></tr>
+      <tr><td>Include unverified docks</td><td>At your own risk: includes bases with unknown ship docking or unverified ID/private POB access. Known no-dock bases and incompatible ship docks stay blocked.</td></tr>
       <tr><td>Search depth</td><td>Standard or Extended (slower, checks more candidates).</td></tr>
     </table>
   </div>
@@ -360,12 +360,13 @@ body{margin:0;background:#050506}
   <h3 id="docking">Docking rules &amp; Corsair ID</h3>
   <p>With <b>Flying as Corsair</b> on, DTR uses the real Corsairs ID rep-hack data to predict where you can dock:</p>
   <ul>
-    <li>Bases whose owners are hostile to the Corsairs ID are excluded (for example Lane Hacker bases such as Cochrane Depot).</li>
-    <li>Bases where access cannot be verified are excluded unless you tick <i>Include unverified docks</i>.</li>
+    <li>NPC bases require reputation <b>above -0.55</b>. An ID maximum or fixed reputation of exactly -0.55 is already no-dock. This excludes all <b>Order</b> bases with the Corsair ID, including Thebes, Taba and Akabat, as well as <b>Lane Hacker</b> bases such as Cochrane Depot (-0.70).</li>
+    <li>Bases where ID access or the selected ship's physical docking cannot be verified are excluded unless you tick <i>Include unverified docks</i>. Known denied bases and incompatible ship docks remain blocked with that option on.</li>
     <li>A base being allowed means <b>possible, not guaranteed</b> — your personal reputation and private POB rules still apply.</li>
     <li>Some bases are always blocked (e.g. no-dock Planet Manhattan).</li>
   </ul>
-  <p>With Corsair off, no ID check is done and you should verify access for your own faction yourself.</p>
+  <p>With Corsair off, no ID check is done and you should verify access for your own faction yourself. Ship docking-class restrictions still apply. Unknown physical docking still requires <i>Include unverified docks</i>.</p>
+  <p>If docking metadata cannot be refreshed, the last valid ID rules and NPC owners are retained with a <b>CACHED</b> notice. The ID-rule date is shown separately from market prices. <span class="ui">FORCE MARKET UPLINK</span> retries the full refresh.</p>
 </section>
 
 <!-- ============================================================ -->
@@ -501,7 +502,7 @@ body{margin:0;background:#050506}
   <details class="dh-faq"><summary>Why does an item show — instead of 0?</summary><div><p>— means the value wasn't reported. DTR deliberately doesn't guess, so you can tell “really empty” from “unknown”.</p></div></details>
   <details class="dh-faq"><summary>My pins disappeared</summary><div><p>Pins are stored per base and per device/browser. Check you are on the same base and browser; clearing site data removes them.</p></div></details>
   <details class="dh-faq"><summary>Trade Routes found no routes</summary><div><p>Try longer <b>Max route time</b>, more <b>capital</b>, <b>Extended</b> search depth, <b>Include POBs</b>, or a different start base. Also check <b>Available cargo</b> and the docking class of your ship.</p></div></details>
-  <details class="dh-faq"><summary>A suggested route won't let me dock</summary><div><p>Docking is predicted, not guaranteed. Your personal reputation, private POB whitelists or in-game rules may differ. Leave <i>Include unverified docks</i> off for the safest results.</p></div></details>
+  <details class="dh-faq"><summary>A suggested route won't let me dock</summary><div><p>Check <b>Flying as Corsair</b>, the ship's docking class and any <b>CACHED</b> docking notices. Use <b>UPDATE NOW</b> when an app update is ready, then recalculate. Personal reputation, private POB whitelists and in-game restrictions can still differ. Leave <i>Include unverified docks</i> off for the safest results.</p></div></details>
   <details class="dh-faq"><summary>The calculator total shows —</summary><div><p>At least one material has no price at the selected base. Type a unit price for each <span class="ui">NOT LISTED</span> material, or choose a different price source POB.</p></div></details>
   <details class="dh-faq"><summary>COPY BB CODE did nothing</summary><div><p>Your browser blocked the clipboard. Open the <span class="ui">03 BB CODE</span> view, select all and copy manually.</p></div></details>
   <details class="dh-faq"><summary>The installed app looks old</summary><div><p>Look for the <span class="ui">UPDATE NOW</span> prompt, or open <span class="ui">SYSTEM</span> and check <i>APP UPDATE</i>. Updating reloads the app with the latest version.</p></div></details>

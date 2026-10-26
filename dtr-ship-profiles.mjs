@@ -117,10 +117,13 @@ export function dockEligibility(baseId,profile,navigation,nodeIndex=null){
   if(!node||!Array.isArray(node.allows)||!node.allows.length)return 'unknown';
   return node.allows.includes(profile.dock)?'allowed':'blocked';
 }
-export function blockedShipDocks(bases,profile,navigation){
+export function blockedShipDocks(bases,profile,navigation,{blockUnknown=false}={}){
   if(!navigation?.nodes||!Array.isArray(bases))return [];
   const byNode=new Map(navigation.nodes.map(node=>[node.id,node]));
-  return bases.filter(base=>dockEligibility(base.id,profile,navigation,byNode)==='blocked')
+  return bases.filter(base=>{
+    const state=dockEligibility(base.id,profile,navigation,byNode);
+    return state==='blocked'||(blockUnknown&&state==='unknown');
+  })
     .map(base=>base.id);
 }
 

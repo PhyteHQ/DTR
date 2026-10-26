@@ -4,7 +4,7 @@ import { DEFAULT_SHIP_ID,FALLBACK_SHIPS,verifyShipProfile,blockedShipDocks,dockE
 import { createShipController } from './dtr-ship-controller.mjs';
 import { validateNavigation } from './trade-core/navigation.mjs';
 import { groupRoutes } from './trade-core/variants.mjs';
-import { findPlanetCrete, enrichBaseOwners, assessAccess, setLaneSpeed, LANE_SPEED, CORSAIR_ID_NICKNAME } from './dtr-route-policy.mjs';
+import { findPlanetCrete, enrichBaseOwners, assessAccess, verifiedCorsairIds, setLaneSpeed, LANE_SPEED, CORSAIR_ID_NICKNAME } from './dtr-route-policy.mjs';
 
 const $=id=>document.getElementById(id);
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -21,6 +21,7 @@ let dataMode='none',profile=FALLBACK_SHIPS.find(ship=>ship.id===DEFAULT_SHIP_ID)
 let startId='',startPreferredId='',startTouched=false,worker=null,results=[],lastStats=null,activeOptions=null;
 let access=null,requests=0,detailIndex=-1,loadedAt=0,pickerTimer=0;
 let pobLoadedAt=0,marketInFlight=null,pobRefreshInFlight=null,preparingSearch=false,pobRefreshError='';
+let idLoadedAt=0,idDataMode='none',ownerDataMode='none';
 const availableRoutes=()=>window.DTRApp?.getState?.()?.view==='trade-routes';
 
 function readPreferences(){
@@ -101,7 +102,12 @@ function refreshControls(){
   else if(!access?.indexReady)accessNote.textContent='CORSAIR ON // ID REPHACK DATA UNAVAILABLE. UNKNOWN DOCKS BLOCKED. TRY FORCE MARKET UPLINK OR EXPLICITLY OPT IN TO UNVERIFIED BASES AT YOUR OWN RISK.';
   else accessNote.textContent='CORSAIRS ID REPHACKS // '+qty(access.ruleCount)+' RULES // '+qty(access.counts.restricted)+' RESTRICTED // '+qty(access.counts.unverified)+' UNVERIFIED'+
     (access.includeUnverified?' (MANUALLY INCLUDED)':' (EXCLUDED)')+
-    ' // '+qty(access.blocked.length)+' TOTAL FILTERED. PERSONAL REP / FR6 / POB ACL MAY STILL DIFFER.';
+    ' // '+qty(access.blocked.length)+' TOTAL FILTERED. '+dockingWarning()+' PERSONAL REP / FR6 / POB ACL MAY STILL DIFFER.';
+}
+function dockingWarning(){
+  if(!$('dtrRoutesCorsair').checked)return '';
+  return [idDataMode==='cached'?'CACHED CORSAIR ID RULES':null,
+    ownerDataMode==='cached'?'CACHED NPC OWNERS':null].filter(Boolean).join(' // ');
 }
 function selectedOrigin(){
   return dataset?.bases?.find(b=>b.id===startId)||null;
@@ -189,7 +195,7 @@ function validatePobFeed(pobs){
   return window.DTRApp.validateTelemetry(pobs);
 }
 async function saveMarketCache(){
-  try{await cacheWrite({dataset,factions,corsairIds,loadedAt,pobLoadedAt})}catch{}
+  try{await cacheWrite({dataset,factions,corsairIds,loadedAt,pobLoadedAt,idLoadedAt})}catch{}
 }
 async function marketRefresh(){
   if(busy)return false;
@@ -216,13 +222,24 @@ async function loadMarket(){
     validatePobFeed(pobs);
     const parsed=normalizeDarkstat(pobs,commodities);
     if(!parsed.bases.some(b=>b.offers.length))throw Error('Market feed contains no usable offers.');
-    pobSource=pobs;npcBases=Array.isArray(owners)?owners:[];factions=Array.isArray(rep)?rep:[];
-    corsairIds=Array.isArray(ids)?ids:[];
+    const hasOwners=Array.isArray(owners)&&owners.length>0&&owners.every(row=>
+      row&&typeof row==='object'&&!Array.isArray(row)&&typeof row.nickname==='string'&&row.nickname.trim());
+    const previousOwners=(dataset?.bases||[]).filter(base=>base.kind==='npc').map(base=>({
+      nickname:base.id,faction_nickname:base.factionNickname,faction_name:base.factionName,docking:base.dockingMode
+    }));
+    pobSource=pobs;npcBases=hasOwners?owners:previousOwners;
+    ownerDataMode=hasOwners?'live':previousOwners.length?'cached':'none';
+    if(Array.isArray(rep)&&rep.length)factions=rep;
+    const freshIds=verifiedCorsairIds(ids),previousIds=verifiedCorsairIds(corsairIds);
+    corsairIds=freshIds||previousIds||[];
+    idDataMode=freshIds?'live':previousIds?'cached':'none';
+    if(freshIds)idLoadedAt=Date.now();
     parsed.bases=enrichBaseOwners(parsed,npcBases,pobs);
+    closeRouteDetail();
     dataset=parsed;dataMode='live';loadedAt=Date.now();pobLoadedAt=loadedAt;pobRefreshError='';results=[];lastStats=null;
     await saveMarketCache();
     applyOrigin();syncAccess();refreshControls();renderSource();renderResults();
-    notice(access.indexReady?'CORSAIRS ID REPHACKS ACTIVE // CHECK PERSONAL REP AND BASE ACCESS IN GAME.':'CORSAIRS ID DATA UNAVAILABLE // UNKNOWN DOCKS BLOCKED BY DEFAULT.','warn');
+    notice(access.indexReady?[dockingWarning(),'CORSAIRS ID REPHACKS ACTIVE // CHECK PERSONAL REP AND BASE ACCESS IN GAME.'].filter(Boolean).join(' // '):'CORSAIRS ID DATA UNAVAILABLE // UNKNOWN DOCKS BLOCKED BY DEFAULT.','warn');
     status('MARKET UPLINK SECURE','good');
     return true;
   }catch(e){
@@ -275,6 +292,7 @@ async function loadPobMarket(){
     const pobs=validatePobFeed(reuse?telemetry.data:await readJson('pobs',undefined,controller.signal));
     const updated=mergePobSnapshot(pobs);
     pobSource=pobs;dataset=updated;pobLoadedAt=reuse?at:Date.now();pobRefreshError='';
+    closeRouteDetail();
     results=[];lastStats=null;
     applyOrigin();syncAccess();renderResults();
     await saveMarketCache();
@@ -291,6 +309,7 @@ function renderSource(){
   $('dtrRoutesSource').textContent=!dataset?'AWAITING LIVE MARKET DATA // '+(navigation?'ROUTE MAP READY':'LOADING NAVIGATION'):
     (dataMode==='live'?'LIVE DARKSTAT FEED':'CACHED SNAPSHOT')+' // '+qty(dataset.bases.length)+' BASES // '+dateText(dataset.asOf)+
     ' // '+(navigation?qty(navigation.nodes.length)+' NAV POINTS · LANES 2,500 M/S':'NAVIGATION UNAVAILABLE')+
+    ($('dtrRoutesCorsair').checked?' // ID RULES '+(idLoadedAt?dateText(idLoadedAt):'DATE UNKNOWN'):'')+
     ($('dtrRoutesPobs').checked?' // POB SNAPSHOT '+(pobLoadedAt?dateText(pobLoadedAt):'UNKNOWN')+(pobMarketStale()?' · OLDER THAN 5 MIN':''):'');
 }
 function readParams(){
@@ -304,13 +323,15 @@ function readParams(){
     throw Error('Starting base is excluded by the Corsair dock filter. Known restrictions always stay blocked. Unverified docks require explicit opt-in in Advanced Search.');
   if(dockEligibility(origin.id,profile,navigation)==='blocked')
     throw Error('Selected ship cannot physically dock at the starting base. Choose another ship or start location.');
+  if(shipDockBlocked(origin.id))
+    throw Error('Ship docking at the starting base is unverified. Choose another base or explicitly include unverified docks.');
   const cargo=Number($('dtrRoutesCargo').value);
   if(!(cargo>0&&cargo<=profile.cargo))throw Error('Cargo volume exceeds selected cargo class.');
   const capital=Number($('dtrRoutesCapital').value);
   if(!(capital>=0))throw Error('Trading capital must not be negative.');
   const mode=routeMode==='one'?'one':$('dtrRoutesLegs').value;
   const block=access?.blocked||[];
-  const shipBlocked=blockedShipDocks(dataset.bases,profile,navigation);
+  const shipBlocked=shipDockBlocks();
   if($('dtrRoutesCorsair').checked&&!access?.indexReady&&!$('dtrRoutesUnverified').checked)
     throw Error('Corsairs ID rephack data unavailable. Strict screening blocks unknown stations. Try FORCE MARKET UPLINK or deliberately opt in to unverified docks.');
   return {
@@ -327,6 +348,26 @@ function readParams(){
     timeModel:{dock:30,jump:15,lane:10,charge:5}
   };
 }
+function shipDockBlocked(id){
+  const state=dockEligibility(id,profile,navigation);
+  return state==='blocked'||(state==='unknown'&&!$('dtrRoutesUnverified').checked);
+}
+function shipDockBlocks(){
+  return blockedShipDocks(dataset?.bases||[],profile,navigation,{blockUnknown:!$('dtrRoutesUnverified').checked});
+}
+function screenRoutes(rows){
+  if(!Array.isArray(rows)||!dataset||!activeOptions)return [];
+  const bases=byId(),blocked=new Set([...(activeOptions.blocked||[]),...shipDockBlocks(),
+    ...($('dtrRoutesCorsair').checked?access?.blocked||[]:[])]);
+  const allowed=id=>bases.has(id)&&!blocked.has(id)&&(!activeOptions.excludePobs||bases.get(id).kind!=='pob');
+  return rows.filter(route=>Array.isArray(route?.legs)&&route.legs.length&&
+    route.legs.every(leg=>allowed(leg?.source)&&allowed(leg?.target)));
+}
+function closeRouteDetail(){
+  const dialog=$('dtrRoutesDetailDialog');
+  if(dialog?.open)dialog.close();
+  detailIndex=-1;
+}
 function searchWorker(){
   if(worker)return worker;
   worker=new Worker('./trade-core/worker.mjs',{type:'module'});
@@ -337,12 +378,15 @@ function searchWorker(){
         ?'COMPARING '+qty(data.candidates)+' TRADE PAIRS...'
         :'CHECKING '+qty(data.checked||data.considered||0)+' ROUTES // '+qty(data.found||0)+' FOUND';
     }else if(data.type==='result'){
-      busy=false;results=data.result.results||[];lastStats=data.result.stats||null;
+      const received=Array.isArray(data.result?.results)?data.result.results:[];
+      busy=false;results=screenRoutes(received);lastStats=data.result?.stats||null;
       status('ROUTE SEARCH COMPLETE','good');
       refreshControls();renderResults();
       const warnings=[];
+      if(received.length>results.length)warnings.push('ROUTES WITH RESTRICTED OR UNVERIFIED DOCKING WERE REMOVED. RECALCULATE WITH YOUR CURRENT FILTERS.');
+      if(dockingWarning())warnings.push(dockingWarning());
       if(activeOptions?.excludePobs===false&&pobRefreshError)warnings.push(pobRefreshError);
-      if(lastStats?.partial)warnings.push('SEARCH BUDGET REACHED // BEST VERIFIED CANDIDATES SHOWN. MORE ROUTES MAY EXIST.');
+      if(lastStats?.partial)warnings.push('SEARCH BUDGET REACHED // BEST CHECKED CANDIDATES SHOWN. MORE ROUTES MAY EXIST.');
       if(warnings.length)notice(warnings.join(' // '),'warn');
     }else if(data.type==='error'){
       busy=false;status('ROUTE SEARCH FAILED','danger');notice('Calculation failed: '+data.message,'danger');refreshControls();
@@ -352,6 +396,8 @@ function searchWorker(){
   return worker;
 }
 function markResultsStale(){
+  closeRouteDetail();
+  activeOptions=null;
   if(busy){
     worker?.postMessage({type:'cancel'});
     requests++;busy=false;
@@ -373,7 +419,8 @@ async function runSearch(){
     finally{preparingSearch=false;refreshControls();}
     try{options=readParams()}catch(e){notice(e.message,'warn');return;}
   }
-  activeOptions=options;savePreferences();notice(options.excludePobs?'':pobRefreshError, 'warn');
+  activeOptions=options;savePreferences();notice([dockingWarning(),options.excludePobs?'':pobRefreshError].filter(Boolean).join(' // '), 'warn');
+  closeRouteDetail();
   busy=true;results=[];lastStats=null;
   $('dtrRoutesProgress').textContent='EVALUATING PROFITABLE MARKET CONNECTIONS...';
   $('dtrRoutesResults').innerHTML='<div class="dtr-routes-empty"><strong>SEARCHING DISCOVERY MARKETS</strong><p>Evaluating cargo, prices, docking predictions, storage and flight time.</p></div>';
@@ -393,8 +440,11 @@ function routeStops(route,baseMap=byId()){
 function accessTag(id){
   const info=access?.byId.get(id);
   const labels={likely:'LIKELY ACCESS — NOT GUARANTEED',restricted:'NO DOCK / RESTRICTED',unverified:'ACCESS UNVERIFIED'};
-  return '<span data-access="'+escape(info?.state||'unverified')+'">'+
-    escape(labels[info?.state]||labels.unverified)+'</span>';
+  const shipDock=dockEligibility(id,profile,navigation);
+  const state=shipDock==='blocked'?'restricted':info?.state==='restricted'?'restricted':
+    shipDock==='unknown'?'unverified':info?.state||'unverified';
+  return '<span data-access="'+escape(state)+'">'+
+    escape(shipDock==='unknown'&&state!=='restricted'?'SHIP DOCKING UNVERIFIED':labels[state])+'</span>';
 }
 function resultCard(group,index,baseMap){
   const head=group.entries[0],route=head.route;
@@ -426,12 +476,12 @@ function renderResults(){
   if(!results.length){
     out.innerHTML='<div class="dtr-routes-empty"><strong>'+ (lastStats?'NO MATCHING ROUTES':'READY TO CALCULATE')+'</strong><p>'+
       (lastStats?'Try increasing the route time, switching Corsair OFF, allowing POBs or changing the starting base.':'Select your cargo class, then press CALCULATE TRADE ROUTES.')+'</p></div>';
-    $('dtrRoutesResultsFoot').textContent=lastStats?'0 VERIFIED ROUTES // '+qty(lastStats.excludedBases||0)+' FILTERED':'LIVE MARKET DATA READY // PRESS CALCULATE';
+    $('dtrRoutesResultsFoot').textContent=lastStats?'0 MATCHING ROUTES // '+qty(lastStats.excludedBases||0)+' FILTERED':'LIVE MARKET DATA READY // PRESS CALCULATE';
     return;
   }
   const groups=groupRoutes(results,byId(),$('dtrRoutesSort').value);
   out.innerHTML=groups.slice(0,18).map((g,i)=>resultCard(g,i,byId())).join('');
-  $('dtrRoutesResultsFoot').textContent=qty(groups.length)+' ROUTE FAMILIES // '+qty(results.length)+' VERIFIED VARIANTS // '+
+  $('dtrRoutesResultsFoot').textContent=qty(groups.length)+' ROUTE FAMILIES // '+qty(results.length)+' CHECKED VARIANTS // '+
     qty(lastStats?.excludedBases||0)+' MARKET BASES FILTERED // ESTIMATED FLIGHT TIME';
 }
 function showMore(groupIndex,button){
@@ -446,6 +496,10 @@ function showMore(groupIndex,button){
 }
 function openDetail(idx){
   const route=results[idx];if(!route||!dataset)return;
+  if(!screenRoutes([route]).length){
+    closeRouteDetail();results=screenRoutes(results);renderResults();
+    notice('This route no longer matches your docking filters. Recalculate trade routes.','warn');return;
+  }
   detailIndex=idx;
   const bases=byId(),stops=routeStops(route,bases);
   $('dtrRoutesDetailTitle').textContent=route.roundTrip?'Round Trip Manifest':'One Way Manifest';
@@ -491,7 +545,7 @@ function renderPicker(query){
   $('dtrRoutesPickerList').innerHTML=matches.length?matches.map(b=>{
     const ac=access?.byId.get(b.id);
     const shipDock=dockEligibility(b.id,profile,navigation);
-    const denied=($('dtrRoutesCorsair').checked&&access?.blocked.includes(b.id))||shipDock==='blocked';
+    const denied=($('dtrRoutesCorsair').checked&&access?.blocked.includes(b.id))||shipDockBlocked(b.id);
     return '<button type="button" data-route-start-id="'+escape(b.id)+'" data-access="'+escape(ac?.state||'unverified')+'"'+
       (denied?' disabled title="Unavailable due to ID or selected ship docking restrictions"':'')+'><strong>'+escape(b.name)+'</strong>'+
       '<small>'+escape(b.systemName||b.system||'')+' // '+(b.kind==='pob'?'POB':'NPC')+' // '+
@@ -506,6 +560,9 @@ function selectOrigin(id){
   }
   if(dockEligibility(base.id,profile,navigation)==='blocked'){
     notice('The selected ship cannot physically dock at that base. Try another ship or start location.','warn');return;
+  }
+  if(shipDockBlocked(base.id)){
+    notice('Ship docking at that base is unverified. Choose another base or explicitly include unverified docks.','warn');return;
   }
   startId=base.id;startPreferredId=id;startTouched=true;
   applyOrigin();syncAccess();markResultsStale();refreshControls();savePreferences();
@@ -585,9 +642,11 @@ async function bootstrap(){
       dataset=restored;factions=Array.isArray(cached.factions)?cached.factions:[];
       // Previous cached market snapshots had only NPC faction relationships.
       // They must NOT be interpreted as Corsairs ID rephacks.
-      corsairIds=Array.isArray(cached.corsairIds)?cached.corsairIds:[];
+      corsairIds=verifiedCorsairIds(cached.corsairIds)||[];
       dataMode='cached';loadedAt=cached.loadedAt||0;
       pobLoadedAt=Number(cached.pobLoadedAt)||loadedAt;
+      idLoadedAt=Number(cached.idLoadedAt)||loadedAt;
+      idDataMode=corsairIds.length?'cached':'none';ownerDataMode='cached';
       applyOrigin();syncAccess();renderSource();refreshControls();
       status('CACHED MARKET SNAPSHOT','warn');
     }
@@ -609,6 +668,7 @@ window.DTRTradeRoutes=Object.freeze({
     corsair:$('dtrRoutesCorsair')?.checked,pobs:$('dtrRoutesPobs')?.checked,
     includeUnverified:$('dtrRoutesUnverified')?.checked,blockedByDockPolicy:access?.blocked.length??0,
     idRepSource:access?.idSource||null,idRepRuleCount:access?.ruleCount??0,
+    idDataMode,idLoadedAt,ownerDataMode,
     marketMode:dataMode,pobLoadedAt,pobMarketStale:$('dtrRoutesPobs')?.checked?pobMarketStale():false,
     marketUpdating:Boolean(marketInFlight||pobRefreshInFlight),navigationReady:Boolean(navigation),resultCount:results.length,
     accessCounts:access?.counts||null
