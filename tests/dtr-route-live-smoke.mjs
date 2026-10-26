@@ -64,6 +64,19 @@ else{
   if(violations.length||!focused.some(base=>ownerId(base)==='fc or grp')){
     console.error('Known hostile/capped NPC owners must all be filtered, including Order at -0.55');process.exitCode=1;
   }
+  // Rebuild from the raw market without NPC metadata or cached owner fields.
+  // Real MarketGood records contain both commodity nickname and base_nickname.
+  const fallbackDataset=normalizeDarkstat(pobs.value,commodities.value);
+  fallbackDataset.bases=enrichBaseOwners(fallbackDataset,[],pobs.value,commodities.value);
+  const fallbackAccess=assessAccess(fallbackDataset.bases,true,factions.status==='fulfilled'?factions.value:[],{tractors:liveIds});
+  const fallbackFailures=allDenied.filter(base=>fallbackAccess.byId.get(base.id)?.state!=='restricted');
+  console.log('DTR LIVE MARKET OWNER FALLBACK '+JSON.stringify({
+    expectedDeniedBases:allDenied.length,recoveredDeniedBases:allDenied.length-fallbackFailures.length,
+    failures:fallbackFailures.map(base=>base.id)
+  }));
+  if(fallbackFailures.length){
+    console.error('Live market owner fallback lost known hostile NPC restrictions');process.exitCode=1;
+  }
   const cochrane=ds.bases.find(b=>b.id==='li12_07_base');
   const cochraneAccess=cochrane?ac.byId.get(cochrane.id):null;
   console.log('DTR ONTARIO CORSAIR DOCKING '+JSON.stringify({

@@ -60,7 +60,10 @@ export function enrichBaseOwners(dataset,npcBases=[],pobs=[],commodities=[],cach
   // Market goods already carry owner metadata. Keep it usable if /npc_bases
   // fails, without turning missing or conflicting metadata into permission.
   const markets=ownerIndex((Array.isArray(commodities)?commodities:[])
-    .flatMap(good=>Array.isArray(good?.market_goods)?good.market_goods:[]));
+    .flatMap(good=>Array.isArray(good?.market_goods)?good.market_goods:[])
+    .filter(row=>row&&!row.PoB&&!row.PoBGood&&typeof row.base_nickname==='string'&&row.base_nickname.trim())
+    // MarketGood.nickname identifies the commodity, not the station.
+    .map(row=>({...row,nickname:row.base_nickname})));
   return dataset.bases.map(base=>{
     const id=normalize(base.id),primary=base.kind==='pob'?players:npcs;
     const source=primary.has(id)?(base.kind==='pob'?'pob':'npc'):base.kind!=='pob'&&markets.has(id)?'market':base.kind!=='pob'&&cached.has(id)?'cache':'base';

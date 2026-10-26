@@ -59,12 +59,12 @@ assert.equal(baseAccess({kind:'npc',factionName:'Same Name'},true,ambiguous).sta
 assert.equal(baseAccess({kind:'npc',factionNickname:'hostile_grp',factionName:'Same Name'},true,ambiguous).state,'restricted');
 assert.equal(baseAccess({kind:'npc',factionNickname:'friend_grp',factionName:'Same Name'},true,ambiguous).state,'likely');
 
-const markets=fixture.npcBases.map(row=>({base_nickname:row.nickname,base_name:row.name,
+const markets=fixture.npcBases.map(row=>({nickname:'commodity_test',base_nickname:row.nickname,base_name:row.name,
  faction_nick:row.faction_nick,faction_name:row.faction_name,system_nick:'test',system_name:row.system_name,
  base_pos:[0,0,0],base_sells:true,price_base_sells_for:5,price_base_buys_for:8,volume:1}));
 markets.push(...[
  ['crete','Planet Crete','fc_c_grp','Corsairs'],['friend','Friendly Market','gd_z_grp','Zoners']
-].map(([base_nickname,base_name,faction_nick,faction_name])=>({base_nickname,base_name,faction_nick,faction_name,
+].map(([base_nickname,base_name,faction_nick,faction_name])=>({nickname:'commodity_test',base_nickname,base_name,faction_nick,faction_name,
  system_nick:'test',system_name:'Test System',base_pos:[0,0,0],base_sells:true,
  price_base_sells_for:5,price_base_buys_for:8,volume:1})));
 const commodities=[{nickname:'commodity_test',name:'Test Goods',volume:1,market_goods:markets}];
@@ -75,6 +75,11 @@ const fallbackAccess=assessAccess(fallback,true,factions,idOptions);
 assert.equal(fallbackAccess.byId.get('st08_01_base').state,'restricted','market owner fallback must identify Order');
 assert.equal(fallbackAccess.byId.get('li12_07_base').state,'restricted','market owner fallback must identify Lane Hackers');
 assert.equal(fallbackAccess.byId.get('crete').state,'likely','valid friendly markets must remain usable without the NPC endpoint');
+const ignoredPobRows=enrichBaseOwners(normalized,[],[],[{market_goods:[...markets,
+ {...markets[0],faction_nick:'fc_c_grp',PoB:{nickname:markets[0].base_nickname}},
+ {...markets[0],faction_nick:'fc_c_grp',PoBGood:{nickname:'commodity_test'}}]}]);
+assert.equal(assessAccess(ignoredPobRows,true,factions,idOptions).byId.get(markets[0].base_nickname).state,'restricted',
+ 'POB market records must not replace or conflict with NPC ownership');
 const staleOwners=[{nickname:'st08_01_base',faction_name:'Corsairs',faction_nick:'fc_c_grp'}];
 assert.equal(enrichBaseOwners(normalized,staleOwners,[],commodities).find(b=>b.id==='st08_01_base').factionNickname,'fc_c_grp',
  'explicit NPC metadata takes priority over fallback market metadata');

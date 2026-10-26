@@ -85,6 +85,10 @@ node tests/static-audit.mjs
 
 GitHub Actions checks JavaScript and ES module syntax and runs static, calculator, production, shipyard, forum, pricing, docking-policy and integrated trade-route runtime audits on changes to `main`.
 
+## Market owner identity (v1.0.12)
+
+- Market rows identify the commodity with `nickname` and the station with `base_nickname`. Ownership fallback now explicitly uses the station ID and excludes POB market rows. Regression data includes both identifiers and overlapping POB records.
+
 ## Docking follow-up (v1.0.11)
 
 - If NPC ownership metadata is unavailable, current commodity-market owner fields are used before falling back to cached owners. Conflicting records remain unverified; POB and NPC records cannot overwrite each other's owners.

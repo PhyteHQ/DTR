@@ -268,7 +268,7 @@ for(const brokenIdReply of [null,[{nickname:'fc_c_grp',reputations:[{nickname:'f
 const noId=runtime({...dockingOptions,ids:[]});await noId.app.runSearch();
 assert.equal(noId.messages.length,0,'faction metadata alone must never authorize a strict Corsair search');
 
-const currentMarketGoods=marketGoods.map(row=>({...row,faction_name:
+const currentMarketGoods=marketGoods.map(row=>({...row,nickname:'commodity_test',faction_name:
  dockingMarket.bases.find(base=>base.id===row.base_nickname).factionName}));
 const marketOwners=runtime({...dockingOptions,market:initial,ids:[],reply:async path=>{
  if(path==='pobs')return freshPobs;
