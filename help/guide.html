@@ -366,7 +366,7 @@ body{margin:0;background:#050506}
     <li>Some bases are always blocked (e.g. no-dock Planet Manhattan).</li>
   </ul>
   <p>With Corsair off, no ID check is done and you should verify access for your own faction yourself. Ship docking-class restrictions still apply. Unknown physical docking still requires <i>Include unverified docks</i>.</p>
-  <p>If docking metadata cannot be refreshed, the last valid ID rules and NPC owners are retained with a <b>CACHED</b> notice. The ID-rule date is shown separately from market prices. <span class="ui">FORCE MARKET UPLINK</span> retries the full refresh.</p>
+  <p>If the NPC owner request is unavailable, DTR first uses ownership reported in the current commodity markets. Missing owners then fall back to previous NPC metadata. Conflicting owners remain unverified. If ID rules cannot be refreshed, the last valid rules are retained with a <b>CACHED</b> notice. The ID-rule date is shown separately from market prices. <span class="ui">FORCE MARKET UPLINK</span> retries the full refresh.</p>
 </section>
 
 <!-- ============================================================ -->

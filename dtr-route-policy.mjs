@@ -38,18 +38,38 @@ export function findPlanetCrete(bases){
   return nameExact.length===1?nameExact[0]:null;
 }
 
-export function enrichBaseOwners(dataset,npcBases=[],pobs=[]){
+const ownerFields=row=>({
+  factionNickname:first(row,'faction_nickname','faction_nick','faction','factionNickname'),
+  factionName:first(row,'faction_name','factionName','faction_display_name')
+});
+function ownerIndex(rows){
   const byId=new Map();
-  for(const base of [...(Array.isArray(npcBases)?npcBases:[]),...(Array.isArray(pobs)?pobs:[])]){
-    const id=idOf(base);
-    if(id)byId.set(normalize(id),base);
+  for(const row of Array.isArray(rows)?rows:[]){
+    if(!row||typeof row!=='object'||Array.isArray(row))continue;
+    const id=normalize(idOf(row)),owner=ownerFields(row);
+    const key=normalize(owner.factionNickname||owner.factionName);
+    if(!id||!key)continue;
+    const previous=byId.get(id);
+    if(byId.has(id)&&(!previous||previous.key!==key))byId.set(id,null);
+    else byId.set(id,{row,key});
   }
+  return byId;
+}
+export function enrichBaseOwners(dataset,npcBases=[],pobs=[],commodities=[],cachedOwners=[]){
+  const npcs=ownerIndex(npcBases),players=ownerIndex(pobs),cached=ownerIndex(cachedOwners);
+  // Market goods already carry owner metadata. Keep it usable if /npc_bases
+  // fails, without turning missing or conflicting metadata into permission.
+  const markets=ownerIndex((Array.isArray(commodities)?commodities:[])
+    .flatMap(good=>Array.isArray(good?.market_goods)?good.market_goods:[]));
   return dataset.bases.map(base=>{
-    const row=byId.get(normalize(base.id));
+    const id=normalize(base.id),primary=base.kind==='pob'?players:npcs;
+    const source=primary.has(id)?(base.kind==='pob'?'pob':'npc'):base.kind!=='pob'&&markets.has(id)?'market':base.kind!=='pob'&&cached.has(id)?'cache':'base';
+    const found=primary.has(id)?primary.get(id):source==='market'?markets.get(id):source==='cache'?cached.get(id):{row:base};
+    const row=found?.row;
     return {...base,
-      factionNickname:first(row,'faction_nickname','faction_nick','faction'),
-      factionName:first(row,'faction_name','factionName','faction_display_name'),
-      dockingMode:first(row,'defense_mode','docking')
+      ...ownerFields(row),
+      ownerSource:row?source:'unknown',
+      dockingMode:first(row,'defense_mode','docking','dockingMode')
     };
   });
 }
@@ -75,7 +95,7 @@ export function reputationIndex(factions,tractors=[]){
   const matches=(Array.isArray(tractors)?tractors:[])
     .filter(row=>normalize(text(row?.nickname))===normalize(CORSAIR_ID_NICKNAME));
   const id=matches.length===1?matches[0]:null;
-  if(!id||!Array.isArray(id.rephacks)||!id.rephacks.length)
+  if(!id||!Array.isArray(id.rephacks)||!id.rephacks.length||id.rephacks.length>10000)
     return {ready:false,names,ambiguousNames,relation,source:null,ruleCount:0};
   for(const row of id.rephacks){
     const code=text(row?.faction_nickname),key=normalize(code);

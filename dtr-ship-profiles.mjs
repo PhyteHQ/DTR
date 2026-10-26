@@ -20,7 +20,7 @@ const ALIASES=Object.freeze({
 });
 export const norm=value=>String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 const reasonableInteger=(value,lower,upper)=>{
-  if(value===null||value===undefined||value==='')return null;
+  if(typeof value!=='number'&&(typeof value!=='string'||value.trim()===''))return null;
   const number=Number(value);
   return Number.isSafeInteger(number)&&number>=lower&&number<=upper?number:null;
 };

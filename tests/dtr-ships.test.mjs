@@ -61,6 +61,10 @@ assert.equal(searchShipProfiles(ships,'pilgrim_liner')[0].nickname,'pilgrim_line
 assert.equal(searchShipProfiles(ships,'dsy_slaveliner').length,0,'the ignored Pilgrim version must not appear in search');
 assert.throws(()=>normalizeShipRegistry(null),'API invalid should be rejected');
 assert.throws(()=>normalizeShipRegistry([{name:'bad'}]),'a malformed registry may not replace cached ships');
+for(const bad of [true,false,[],[2],{},'']){
+ assert.throws(()=>normalizeShipRegistry([{...raws[0],dock_type:bad}]),'malformed docking classes must not be coerced into a valid class');
+ assert.throws(()=>validateCustomProfile({name:'Malformed',cargo:500,cruise:350,dockType:bad},'custom:malformed'));
+}
 assert.deepEqual(resolveSavedFavorites(null,ships),DEFAULT_FAVORITES);
 const custom=validateCustomProfile({
   name:'My Cargo Custom',cargo:'4900',cruise:'420',dockType:'3'

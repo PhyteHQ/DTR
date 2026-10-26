@@ -85,6 +85,13 @@ node tests/static-audit.mjs
 
 GitHub Actions checks JavaScript and ES module syntax and runs static, calculator, production, shipyard, forum, pricing, docking-policy and integrated trade-route runtime audits on changes to `main`.
 
+## Docking follow-up (v1.0.11)
+
+- If NPC ownership metadata is unavailable, current commodity-market owner fields are used before falling back to cached owners. Conflicting records remain unverified; POB and NPC records cannot overwrite each other's owners.
+- Search submission and result acceptance re-evaluate the current Corsair switch and rules. Returned routes must also start at the selected origin. The picker and manifest show both faction and physical docking status consistently.
+- Malformed boolean/array ship docking classes are rejected. Additional captured-data audits cover all 81 ID rules, ownership fallbacks and every route mode with exact-base/system returns.
+- The empty-results hint keeps the Corsair filter enabled for Corsair pilots. Update the installed app with **UPDATE NOW** to load the complete change.
+
 ## Docking update (v1.0.10)
 
 - Discovery refuses NPC docking at reputation **-0.55 or below**. Corsair-ID maximum/static rules now use that inclusive limit; minimum rules only imply possible access strictly above it. This fixes every Order NPC base and other owners at the same boundary, rather than blacklisting one station.

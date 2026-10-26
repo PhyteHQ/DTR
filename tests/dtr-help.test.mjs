@@ -47,7 +47,8 @@ for(const screenshot of images){
 }
 for(const src of references)assert(images.includes(src), 'Broken guide screenshot: '+src);
 assert(service.includes('./help/guide.html'),'Full guide must be available offline');
-assert.match(service, /v1\.0\.10/, 'PWA must bump cache so the docking guide and policy update together');
+const appVersion=(await read('dtr-quality.js')).match(/version:\s*'([^']+)'/)?.[1];
+assert(appVersion&&service.includes('v'+appVersion),'PWA cache and the displayed app version must match');
 assert(docs.includes('## DTR Help Guide'),'Integration details documented');
 // Exercise the actual guide script: every visible contents link must still
 // point into a visible chapter, including links to its subheadings.

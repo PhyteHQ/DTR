@@ -268,4 +268,35 @@ for(const brokenIdReply of [null,[{nickname:'fc_c_grp',reputations:[{nickname:'f
 const noId=runtime({...dockingOptions,ids:[]});await noId.app.runSearch();
 assert.equal(noId.messages.length,0,'faction metadata alone must never authorize a strict Corsair search');
 
+const currentMarketGoods=marketGoods.map(row=>({...row,faction_name:
+ dockingMarket.bases.find(base=>base.id===row.base_nickname).factionName}));
+const marketOwners=runtime({...dockingOptions,market:initial,ids:[],reply:async path=>{
+ if(path==='pobs')return freshPobs;
+ if(path==='commodities')return [{nickname:'commodity_test',name:'Test Goods',volume:1,market_goods:currentMarketGoods}];
+ if(path==='npc_bases')throw Error('NPC ownership endpoint unavailable');
+ if(path==='factions')return dockFixture.factions;
+ if(path==='tractors')return [dockFixture.id];
+ return [];
+}});
+assert.equal(await marketOwners.app.marketRefresh(),true);
+assert.equal(marketOwners.audit.inspect().ownerDataMode,'market','fresh market ownership must work even without cached owners');
+for(const id of deniedIds)assert(marketOwners.audit.inspect().access.blocked.includes(id),'fresh fallback must identify every captured hostile owner');
+await marketOwners.app.runSearch();
+for(const id of deniedIds)assert(marketOwners.messages.at(-1).options.blocked.includes(id));
+
+const missedEvent=runtime({...dockingOptions,corsair:false});
+missedEvent.node('dtrRoutesCorsair').checked=true;await missedEvent.app.runSearch();
+for(const id of deniedIds)assert(missedEvent.messages.at(-1).options.blocked.includes(id),
+ 'submission must re-evaluate checkbox state even without a prior change event');
+const request=missedEvent.messages.at(-1);
+missedEvent.workers[0].onmessage({data:{id:request.id,type:'result',result:{results:[
+ {...route('buyer',100,1000),legs:[{source:'buyer',target:'crete',good:'commodity_test'}]},route('buyer',100,1000)
+],stats:{}}}});
+assert.equal(missedEvent.audit.inspect().resultCount,1,'a stale worker route with another starting base must not be displayed');
+missedEvent.audit.openDetail(0);
+assert.match(missedEvent.node('dtrRoutesDetailBody').innerHTML,/SHIP DOCK COMPATIBLE/);
+missedEvent.audit.renderPicker('ring-only');
+assert.match(missedEvent.node('dtrRoutesPickerList').innerHTML,/data-access="restricted"/,
+ 'an incompatible physical dock must not be coloured as likely access in the picker');
+
 console.log('DTR market/docking runtime passed (sort, POB freshness, all captured Order/Lane Hacker stops, worker screening, picker, manifests, physical/unknown docks, metadata fallback and filter races).');
