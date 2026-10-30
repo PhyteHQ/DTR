@@ -264,19 +264,20 @@ chooseFuel('');
 assert(goldChoiceRuntime.html.includes('<strong>MOX</strong>'), 'empty material selection must return to automatic mode');
 assert(goldChoiceRuntime.html.includes('AUTOMATICALLY USING THE BEST PRICED AVAILABLE OPTION'), 'automatic mode must be restorable');
 
-const corsairRecipe = catalog.recipes.find(recipe => {
-  const bonus = recipe.bonuses.find(entry => entry.id === 'fc_c_grp' && entry.factor < 1);
-  return bonus && recipe.inputs.every(group => group.options.length === 1);
-});
-assert(corsairRecipe, 'Corsair IFF fixture recipe must exist');
-const corsairFactor = corsairRecipe.bonuses.find(entry => entry.id === 'fc_c_grp').factor;
-const expectedCorsairCost = corsairRecipe.creditCost + corsairRecipe.inputs.reduce(
-  (total, group) => total + Math.ceil(group.options[0].qty * corsairFactor - 1e-9) * completePrice,
-  0
-);
-const corsairHtml = calculatorHtml(corsairRecipe.id, inventoryFor(corsairRecipe, completePrice));
-assert(corsairHtml.includes(`CORSAIR IFF BONUS // ${corsairFactor.toFixed(2)}× MATERIALS`), 'Corsair IFF factor must be visible');
-assert(corsairHtml.includes(`$${expectedCorsairCost.toLocaleString('en-GB')}`), 'Corsair IFF factor must alter material cost');
+const exoticRecipe = catalog.recipes.find(recipe => recipe.id === 'ship_part_exotic');
+assert(exoticRecipe, 'Corsair Exotic Systems recipe must exist');
+const exoticHtml = calculatorHtml(exoticRecipe.id, inventoryFor(exoticRecipe, completePrice));
+assert(exoticHtml.includes('CORSAIR IFF BONUS // 0.25× MATERIALS'), 'the retained Exotic Systems discount must be visible');
+assert(exoticHtml.includes('TOTAL BUILD COST</small><strong>$200</strong>'),
+  'Exotic Systems must apply its retained Corsair factor and choose the 10-unit dynamic input');
+
+const salvageHtml = calculatorHtml('recipe_milsal', [
+  { nickname: 'commodity_military_salvage', quantity: 750, price: 50 }
+], 25);
+assert(salvageHtml.includes('TOTAL BUILD COST</small><strong>$12,500</strong>'),
+  'one 25-unit Prototype batch must consume 250 salvage at the quoted unit price');
+assert(!salvageHtml.includes('CORSAIR IFF BONUS'), 'the removed salvage discount must not be applied again');
+assert(salvageHtml.includes('CHECKED 2026-10-30'), 'the calculator must expose the recipe snapshot date');
 
 const wildcatHtml = calculatorHtml('recipe_gold_basic', [], 1, {}, 'wildcat gold');
 assert(wildcatHtml.includes('4 MATCHES'), 'Wildcat Gold search must expose basic, advanced, bulk and reprocessing recipes');
@@ -323,4 +324,45 @@ const sanctuaryShip=calculatorHtml(invictaShipRecipe.id,invictaStock,1,{},'','de
 assert(sanctuaryShip.includes('value="1"'),'normal non-Invicta calculator quotes must retain BASE BUYS for Exotics');
 assert(!sanctuaryShip.includes('EXOTIC = BASE SELLS'),'Exotic sale-price exception must remain scoped to Invicta shipyard');
 
-console.log('DTR calculator runtime audit passed (live, manual, missing, variants, alternative-price and Corsair-IFF scenarios).');
+// The 30 October public snapshot adds three hulls, four weapon variants and a cloak.
+// Fixed unit prices isolate consumed quantities from live market changes.
+const newRecipeCosts = new Map([
+  ['ship_assembly_ex_hacker_gunship', 1530],
+  ['ship_assembly_cv_cruiser', 3060],
+  ['recipe_cruiser_heavy_battlecannon', 1140],
+  ['recipe_generic_gb_chaingun', 910],
+  ['recipe_gb_heavychaingun_forward', 910],
+  ['recipe_gb_heavychaingun_forward_internal', 990],
+  ['recipe_cloak_light_blacklight_delta', 9000],
+  ['ship_assembly_xenos_corvette', 1922]
+]);
+const quotedCost = html => html.match(/TOTAL BUILD COST<\/small><strong>([^<]*)<\/strong>/)?.[1];
+for (const [id, expected] of newRecipeCosts) {
+  const recipe = catalog.recipes.find(entry => entry.id === id);
+  assert(recipe, `new recipe ${id} must exist`);
+  const stocked = inventoryFor(recipe, 2);
+  const html = calculatorHtml(id, stocked);
+  assert.equal(quotedCost(html), `$${expected.toLocaleString('en-GB')}`,
+    `${id} must price consumed materials while excluding retained catalysts`);
+  assert(html.includes(id === 'ship_assembly_xenos_corvette'
+    ? 'RESTRICTED RECIPE // CORSAIR IFF NOT AUTHORIZED'
+    : 'QUOTE READY // STOCK AVAILABLE'), `${id} must retain its actual Corsair authorization`);
+  const missing = calculatorHtml(id, []);
+  assert.equal(quotedCost(missing), '—', `${id} missing prices must stay unknown`);
+  assert(missing.includes('NO POB PRICE // ENTER MANUALLY'), `${id} must allow manual prices`);
+  const searched = calculatorHtml(id, stocked, 1, {}, recipe.name);
+  assert(!searched.includes('NO MATCHING RECIPE'), `${id} must be searchable by its name`);
+}
+const xenoRecipe = catalog.recipes.find(recipe => recipe.id === 'ship_assembly_xenos_corvette');
+assert.equal(xenoRecipe.restricted, true, 'the Xeno Corvette must remain restricted');
+assert(xenoRecipe.bonuses.some(bonus => bonus.id === 'fc_x_grp'), 'Xeno Corvette authorization must retain Xenos affiliation');
+assert(!xenoRecipe.bonuses.some(bonus => bonus.id === 'fc_c_grp'), 'Xeno Corvette must not acquire Corsair authorization');
+for (const recipe of catalog.recipes) {
+  const html = calculatorHtml(recipe.id, inventoryFor(recipe, 2));
+  assert(html.includes('Recipe Cost Calculator'), `${recipe.id} must render`);
+  assert(!/\b(?:NaN|Infinity|undefined)\b/.test(html), `${recipe.id} must not display invalid values`);
+}
+const noMatches = calculatorHtml('recipe_milsal', [], 1, {}, 'no-such-recipe-20261030');
+assert(noMatches.includes('CHECKED 2026-10-30'), 'no-match view must retain the source date');
+
+console.log('DTR calculator runtime audit passed (300 recipe displays, eight additions, salvage quantities, live/manual/missing prices, variants and Corsair rules).');

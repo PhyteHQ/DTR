@@ -187,10 +187,16 @@ const hydroRecipe=catalog.recipes.find(entry=>entry.id==='recipe_fow_advanced');
 const exoticRecipe=catalog.recipes.find(entry=>entry.id==='ship_part_exotic');
 const production=sandbox.window.DTRProduction;
 const prototype=production.createSnapshot(prototypeRecipe,base);
-assert.equal(prototype.factor,0.85,'Corsair salvage reclamation bonus must be applied');
+assert.equal(prototype.factor,1,'current salvage reclamation must not apply the removed Corsair discount');
 assert.equal(prototype.outputPerCycle,25,'prototype reclaiming yields 25 components');
-assert.equal(prototype.rows[0].required,255,'300 Military Salvage must apply 0.85 Corsair bonus per cycle');
-assert.equal(prototype.cycles,11,'MilSal stock must determine Prototype capacity');
+assert.equal(prototype.rows[0].required,250,'current reclamation must consume 250 Military Salvage per cycle');
+assert.equal(prototype.cycles,12,'3000 Military Salvage must support twelve current cycles');
+assert.equal(prototype.estimatedOutput,300,'twelve current cycles must produce 300 Prototype Components');
+const salvageBoundary=production.createSnapshot(prototypeRecipe,{shop_items:[
+  {nickname:'commodity_military_salvage',quantity:750}
+]});
+assert.equal(salvageBoundary.cycles,3,'750 salvage must support three cycles without a second discount');
+assert.equal(salvageBoundary.estimatedOutput,75,'750 salvage must produce 75 Prototype Components');
 assert.equal(prototype.byproducts[0].name,'Scrap Metal','reclamation must retain Scrap Metal byproduct');
 assert.equal(prototype.byproducts[0].qty,450,'reclamation must show 450 Scrap Metal byproduct');
 assert.equal(prototype.catalysts[0].qty,100,'100 scientists must be retained, not consumed');

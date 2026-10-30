@@ -3,7 +3,7 @@
   'use strict';
   if (window.DTRQuality) return;
 
-  const META = Object.freeze({ version: '1.0.12', build: '2026.10.26-DOCKING-MARKET-BASE-ID-A' });
+  const META = Object.freeze({ version: '1.0.13', build: '2026.10.30-RECIPE-CATALOG-A' });
   const ATTENTION_KEY = 'dtr:attention:v1';
   const runtimeEvents = [];
   const $ = id => document.getElementById(id);
@@ -248,7 +248,7 @@
         window.DTR_RECIPE_CATALOG?.meta?.recipeCount ? 'good' : 'danger',
         window.DTR_RECIPE_CATALOG?.meta?.recipeCount ? `${window.DTR_RECIPE_CATALOG.meta.recipeCount} READY` : 'UNAVAILABLE',
         window.DTR_RECIPE_CATALOG?.meta?.recipeCount
-          ? 'Discovery recipe data is available to the POB cost calculator.'
+          ? `Recipe snapshot checked: ${window.DTR_RECIPE_CATALOG.meta.sourceCheckedOn || 'UNKNOWN'}. Recipes update with the app; REFRESH updates POB prices and stock.`
           : 'The calculator recipe data did not load.'
       ),
       diagnostic(
