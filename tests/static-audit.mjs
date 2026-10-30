@@ -120,8 +120,14 @@ assert(!html.includes('>WATCHED<'), 'visible inventory controls must use the cle
 assert(!html.includes('ATTENTION REQUIRED'), 'individual POB pages must not repeat the network-wide attention panel');
 assert(!app.includes('renderPriority'), 'removed per-POB attention panel must not leave dead runtime rendering');
 
-assert.equal(catalog?.meta?.recipeCount, 292, 'Discovery catalog must contain all 292 supplied recipes');
-assert.equal(catalog?.recipes?.length, 292, 'catalog metadata and recipe payload must agree');
+assert.equal(catalog?.meta?.recipeCount, 300, 'Discovery catalog must contain all 300 checked recipes');
+assert.equal(catalog?.recipes?.length, catalog.meta.recipeCount, 'catalog metadata and recipe payload must agree');
+assert.equal(new Set(catalog.recipes.map(recipe => recipe.id)).size, catalog.recipes.length, 'recipe IDs must remain unique');
+assert.equal(catalog.meta.sourceCheckedOn, '2026-10-30', 'catalog must identify the checked source snapshot');
+assert.deepEqual(JSON.parse(JSON.stringify(catalog.meta.sourceSha256)), {
+  'base_recipe_items.cfg': 'd9b013cfc260f6a479c79ce9b6746ba8e2d72e0e029ac98065880843de081003',
+  'base_recipe_modules.cfg': '83b8b46b0efb66028f3514b6e5ee0dfcb8b90e8be30beca9cc5d0f7e305ab021'
+}, 'recipe inputs must match the checked public CFG snapshot');
 assert.equal(catalog?.meta?.sourceUrl, 'https://discoverygc.com/gameconfigpublic/', 'catalog must retain its authoritative source URL');
 assert(catalog.recipes.some(recipe => recipe.inputs.some(group => group.kind === 'alternative')), 'catalog must retain alternative recipe inputs');
 assert(catalog.recipes.some(recipe => recipe.inputs.some(group => group.kind === 'dynamic')), 'catalog must retain dynamic recipe inputs');
@@ -232,8 +238,8 @@ assert.match(calculatorCss, /\.calculator-quote-grid\[data-cards="3"\]\s*{[\s\S]
 assert.match(productionCss, /@media \(max-width: 760px\)[\s\S]*?\.production-command button\s*\{[\s\S]*?min-height:\s*44px/, 'production calculator action must remain touch friendly on phones');
 assert.match(productionCss, /\.production-materials li\s*\{[\s\S]*?grid-template-columns:/, 'production inputs must keep a structured desktop layout');
 assert.match(quality, /id="dtrCalculatorLaunch"/, 'mobile header controls must expose the calculator');
-assert.match(quality, /version:\s*'1\.0\.12'/, 'visible build version must match v1.0.12');
-assert.match(sw, /v1\.0\.12/, 'service-worker cache must match v1.0.12');
+assert.match(quality, /version:\s*'1\.0\.13'/, 'visible build version must match v1.0.13');
+assert.match(sw, /v1\.0\.13/, 'service-worker cache must match v1.0.13');
 assert(html.includes('id="dtrAvatarCanvas"') && html.includes('id="dtrAvatarDownload"'), 'Forum portrait framing must be reachable');
 assert(html.includes('id="dtrForumToolAvatar"') && html.includes('id="dtrForumToolComposer"'),
   'Forum must expose the portrait tool alongside the composer near the top');

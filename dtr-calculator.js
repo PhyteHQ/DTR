@@ -3,6 +3,7 @@
   'use strict';
 
   const CATALOG = window.DTR_RECIPE_CATALOG;
+  const CATALOG_CHECKED_ON = CATALOG?.meta?.sourceCheckedOn || 'UNKNOWN';
   const STORAGE_KEY = 'dtr:calculator:v1';
   const DEFAULT_POB = 'deterrence-sanctum';
   const DTR_AFFILIATION = 'fc_c_grp';
@@ -535,7 +536,7 @@
   function renderNoMatch(matches) {
     const pobs = pobOptions();
     root.innerHTML = `<header class="calculator-heading" data-recipe-count="${fmt(CATALOG?.meta?.recipeCount)}"><div><p class="section-kicker">DTR PROCUREMENT // DISCOVERY RECIPES</p><h2>Recipe Cost Calculator</h2><p>LIVE POB PRICES + MANUAL OVERRIDES // MISSING VALUES STAY UNKNOWN</p></div><button type="button" data-calculator-action="overview">BACK TO NETWORK</button></header>
-      <section class="calculator-controls"><div class="calculator-section-head"><div><span>01</span><strong>RECIPE + POB</strong></div><small>${fmt(CATALOG?.meta?.recipeCount)} MASTER RECIPES</small></div><div class="calculator-form-grid">
+      <section class="calculator-controls"><div class="calculator-section-head"><div><span>01</span><strong>RECIPE + POB</strong></div><small>${fmt(CATALOG?.meta?.recipeCount)} MASTER RECIPES<br>CHECKED ${esc(CATALOG_CHECKED_ON)}</small></div><div class="calculator-form-grid">
         <label class="calculator-field calculator-wide"><span>SEARCH RECIPE</span><input id="calculatorRecipeSearch" type="search" value="${esc(state.search)}" placeholder="REACTOR, JUMP DRIVE, HULL…" autocomplete="off"><small>TYPE A PRODUCT NAME OR RECIPE ID</small></label>
         <label class="calculator-field calculator-wide"><span>SELECTED RECIPE</span><select id="calculatorRecipeSelect">${recipeOptions(matches, '')}</select><small>0 MATCHES</small></label>
         <label class="calculator-field"><span>PRICE SOURCE POB</span><select id="calculatorPobSelect">${pobs}</select><small>POB PRICES FILL FIRST // EACH MATERIAL REMAINS EDITABLE</small></label>
@@ -576,7 +577,7 @@
 
     root.innerHTML = `<header class="calculator-heading" data-recipe-count="${fmt(CATALOG.meta.recipeCount)}"><div><p class="section-kicker">DTR PROCUREMENT // DISCOVERY RECIPES</p><h2>Recipe Cost Calculator</h2><p>LIVE POB PRICES + MANUAL OVERRIDES // MISSING VALUES STAY UNKNOWN</p></div><button type="button" data-calculator-action="overview">BACK TO NETWORK</button></header>
       <section class="calculator-controls">
-        <div class="calculator-section-head"><div><span>01</span><strong>RECIPE + POB</strong></div><small>${fmt(CATALOG.meta.recipeCount)} MASTER RECIPES</small></div>
+        <div class="calculator-section-head"><div><span>01</span><strong>RECIPE + POB</strong></div><small>${fmt(CATALOG.meta.recipeCount)} MASTER RECIPES<br>CHECKED ${esc(CATALOG_CHECKED_ON)}</small></div>
         <div class="calculator-form-grid">
           <label class="calculator-field calculator-wide"><span>SEARCH RECIPE</span><input id="calculatorRecipeSearch" type="search" value="${esc(state.search)}" placeholder="REACTOR, JUMP DRIVE, HULL…" autocomplete="off"><small>TYPE A PRODUCT NAME OR RECIPE ID // FIRST MATCH SELECTS AUTOMATICALLY</small></label>
           <label class="calculator-field calculator-wide"><span>SELECTED RECIPE</span><select id="calculatorRecipeSelect">${recipeOptions(matches.length ? matches : [recipe], recipe.id)}</select><small>${matches.length} MATCH${matches.length === 1 ? '' : 'ES'} // ${esc(recipe.craftType || recipe.sourceType || 'GENERAL')}${recipe.restricted ? ' // RESTRICTED' : ''}</small></label>

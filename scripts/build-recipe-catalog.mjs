@@ -4,10 +4,18 @@ import { createHash } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
 import { basename, resolve } from 'node:path';
 
-const [, , itemsArgument, modulesArgument, outputArgument = 'recipe-catalog.js'] = process.argv;
+const [, , itemsArgument, modulesArgument, outputArgument = 'recipe-catalog.js', checkedOnArgument] = process.argv;
 
 if (!itemsArgument || !modulesArgument) {
-  console.error('Usage: node scripts/build-recipe-catalog.mjs <base_recipe_items.cfg> <base_recipe_modules.cfg> [output.js]');
+  console.error('Usage: node scripts/build-recipe-catalog.mjs <base_recipe_items.cfg> <base_recipe_modules.cfg> [output.js] [source-checked-on: YYYY-MM-DD]');
+  process.exit(1);
+}
+
+const sourceCheckedOn = checkedOnArgument || null;
+if (sourceCheckedOn && (!/^\d{4}-\d{2}-\d{2}$/.test(sourceCheckedOn)
+    || !Number.isFinite(Date.parse(sourceCheckedOn))
+    || new Date(sourceCheckedOn).toISOString().slice(0, 10) !== sourceCheckedOn)) {
+  console.error('The source check date must be a valid YYYY-MM-DD date.');
   process.exit(1);
 }
 
@@ -252,6 +260,7 @@ const catalog = {
   meta: {
     schemaVersion: 2,
     sourceUrl: 'https://discoverygc.com/gameconfigpublic/',
+    sourceCheckedOn,
     sourceFiles: [canonicalSourceName(itemsPath), canonicalSourceName(modulesPath)],
     sourceSha256: {
       [canonicalSourceName(itemsPath)]: sha256(itemsBuffer),
@@ -259,7 +268,7 @@ const catalog = {
     },
     recipeCount: recipes.length,
     productCount: new Set(recipes.flatMap(recipe => recipe.outputs.map(output => output.id))).size,
-    generatedFor: 'DTR v0.7.1'
+    generatedFor: 'DTR v1.0.13'
   },
   recipes
 };

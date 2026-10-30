@@ -20,7 +20,7 @@ Mobile-first DTR command dashboard with four main sections: POB NETWORK (Overvie
 - On phones, decorative header layers collapse so live POB content begins substantially higher on the first screen.
 - POB health and last-sync telemetry live in the detail header, leaving only credits and storage as compact summary cards.
 - Every POB has its own pinned-cargo list. Existing global watchlist entries are migrated to all three active POBs once, then remain independently editable per base.
-- All three active POBs include the advanced Scrap Smelter for Basic Alloy. Sanctum and Invicta also run Military Salvage Reclamation (25 Prototype Components plus 450 Scrap Metal byproduct per cycle; Corsair factor 0.85×) and an advanced Hydroponics Bay (750 Food Rations per cycle, using Water and Fertilizers; standard Corsair material load). Invicta additionally fabricates Exotic Systems (Corsair factor 0.25×). Fort Torrelavega retains its advanced Wildcat Gold refining (Corsair factor 0.85×).
+- All three active POBs include the advanced Scrap Smelter for Basic Alloy. Sanctum and Invicta also run Military Salvage Reclamation (250 Military Salvage produces 25 Prototype Components plus 450 Scrap Metal byproduct per cycle; no affiliation discount) and an advanced Hydroponics Bay (750 Food Rations per cycle, using Water and Fertilizers; standard Corsair material load). Invicta additionally fabricates Exotic Systems (Corsair factor 0.25×). Fort Torrelavega retains its advanced Wildcat Gold refining (Corsair factor 0.85×).
 - Each production module uses the respective POB's live stock for input-cycle capacity, next-cycle bottleneck, byproducts and retained catalysts. COST / CALCULATE opens the matching recipe and POB, with POB purchase (BASE BUYS) prices for material costing.
 - Fixed production layout at desktop widths: top-left **Food Rations**, top-right **Basic Alloy**, bottom-left **Prototype Components**, bottom-right **Exotic Systems**. Sanctum leaves the bottom-right slot empty rather than inventing a production module; Torrelavega uses **Wildcat Gold** in the top-left slot and **Basic Alloy** in the top-right. Tablet and phone layouts stack only the modules available at that POB in this logical order without empty placeholders.
 - Invicta's dedicated shipyard supports Murmillo (recipe `ship_assembly_dsy_venator`), Legate (`ship_assembly_dsy_legate`), Consul (`ship_assembly_co_battlecruiser_heavy` / Corsair Command Battlecruiser), and Archon (`ship_assembly_medium_miner` / Modular Miner). Each hull has its own verified recipe requirements, POB hull stock, component stock, next-ship shortfall, retained crew/blueprint prerequisites and per-ship cost calculator. The registry stores the selected hull locally.
@@ -28,7 +28,7 @@ Mobile-first DTR command dashboard with four main sections: POB NETWORK (Overvie
 - Equal API minimum and maximum stock limits are shown once as a required stock value.
 - On wide desktop screens, the command filter aligns with the dashboard shell and overview figures use larger display type.
 - Currency values use Discovery's `$` notation throughout the dashboard and calculator.
-- The recipe calculator contains 292 recipes generated from Discovery's public `base_recipe_items.cfg` and `base_recipe_modules.cfg` data.
+- The recipe calculator contains 300 recipes generated from Discovery's public `base_recipe_items.cfg` and `base_recipe_modules.cfg` data, checked on 30 October 2026. The Calculator and SYSTEM diagnostics show the checked source date. Recipes are bundled with app updates; POB refreshes update prices and stock.
 - Calculator material prices start with the selected DTR POB's Darkstat `price_to_sell_to_base` (**BASE BUYS**) quotation and remain editable per commodity. Manual prices are saved locally per POB, can be reset to the live value and can complete a quote for an unlisted commodity without hiding its stock/listing status.
 - Unlisted commodities and missing POB purchase prices remain unknown (`—`) until a manual price is entered; they are never treated as zero.
 - Recipe search includes actual outputs as well as recipe titles, so affiliation products such as Wildcat Gold expose their basic, advanced and bulk recipes alongside the separate reprocessing recipe.
@@ -72,8 +72,18 @@ Forja del Vacio was retired and is no longer shown as a POB tab, overview card, 
 Rebuild the generated browser catalog from downloaded Discovery CFG files with:
 
 ```sh
-node scripts/build-recipe-catalog.mjs /path/to/base_recipe_items.cfg /path/to/base_recipe_modules.cfg recipe-catalog.js
+node scripts/build-recipe-catalog.mjs /path/to/base_recipe_items.cfg /path/to/base_recipe_modules.cfg recipe-catalog.js 2026-10-30
 ```
+
+The optional final argument records when the source files were checked. Supply their actual check date; omitting it leaves the date unknown. Source SHA-256 hashes are stored in the catalog. The 30 October snapshot was fetched from the public `https://disco-api.dd84ai.com/gameconfigpublic/` mirror used by Darkstat because Discovery's direct configuration URLs returned HTTP 403.
+
+## Recipe update (v1.0.13)
+
+- Adds Halberd / Border Worlds Gunship, Civilian Cruiser and Xeno Corvette; Cruiser Battlecannon, GAC-60 Gunboat Chaingun and GAU-82 Gunboat Rotary Cannon (internal and external); and Light Blacklight-Delta Cloaking Device. Xeno Corvette remains restricted to Xenos affiliation and is not authorized for a Corsair POB.
+- Military Salvage Reclamation now consumes 250 salvage per 25 Prototype Components, with no extra Corsair discount. Sanctum and Invicta production capacity and calculator quotes use the same updated recipe. The retained 100 Scientists and 450 Scrap Metal byproduct are unchanged.
+- Includes current cloak-component faction bonuses and descriptive storage-module faction labels. Invicta's four configured shipyard recipes remain unchanged.
+- Regression checks cover all 300 recipe displays, exact material costs for the eight additions, missing prices, restrictions and the new salvage boundary. Existing route and docking behavior stays covered by the full quality workflow.
+- Use **UPDATE NOW** in an installed app to load the new catalog and source date.
 
 ## Quality checks
 
