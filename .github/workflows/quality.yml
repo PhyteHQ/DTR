@@ -63,6 +63,8 @@ jobs:
         run: node tests/dtr-route-live-smoke.mjs
       - name: Audit current public Discovery recipes without updating the app
         run: node scripts/audit-live-recipes.mjs "$RUNNER_TEMP/dtr-recipe-audit"
+      - name: Check the current candidate against calculator and production runtimes
+        run: node tests/dtr-recipe-candidate.mjs "$RUNNER_TEMP/dtr-recipe-audit/recipe-catalog.current.js"
       - name: Retain public recipe sources and comparison
         if: always()
         uses: actions/upload-artifact@v4
