@@ -35,6 +35,8 @@ jobs:
         run: node tests/calculator-runtime.mjs
       - name: Run production runtime audit
         run: node tests/production-runtime.mjs
+      - name: Run bounty claims runtime audit
+        run: node tests/dtr-bounty.test.mjs
       - name: Run forum composer runtime audit
         run: node tests/forum-runtime.mjs
       - name: Run avatar frame audit

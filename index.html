@@ -30,6 +30,7 @@
   <link rel="stylesheet" href="./dtr-avatar.css">
   <link rel="stylesheet" href="./dtr-trade-routes.css">
   <link rel="stylesheet" href="./dtr-ships.css">
+  <link rel="stylesheet" href="./dtr-bounty.css">
 </head>
 <body>
   <div class="ambient-grid" aria-hidden="true"></div>
@@ -63,10 +64,9 @@
   <div class="transmission-rail" aria-hidden="true"><span>NETWORK STATUS RECEIVED</span></div>
 
   <nav class="tabs" id="tabs" aria-label="DTR main sections">
-    <button class="tab active" type="button" data-view="overview"><span>01</span>POB NETWORK</button>
-    <button class="tab" type="button" data-view="trade-routes"><span>02</span>TRADE ROUTES</button>
-    <button class="tab" type="button" data-view="forum"><span>03</span>FORUM</button>
-    <button class="tab" type="button" data-view="calculator"><span>04</span>CALCULATOR</button>
+    <button class="tab active" type="button" data-view="overview"><span>01</span>OVERVIEW</button>
+    <button class="tab" type="button" data-view="pobs"><span>02</span>POBs</button>
+    <button class="tab" type="button" data-view="ops"><span>03</span>OPS</button>
   </nav>
   <nav class="dtr-pob-subtabs" id="pobTabs" aria-label="POB network views">
     <button class="pob-tab active" type="button" data-view="overview"><span>00</span>OVERVIEW</button>
@@ -76,6 +76,24 @@
   </nav>
 
   <main class="command-frame">
+    <section id="pobsView" class="view" hidden>
+      <div class="dtr-hub-hero"><div><p class="section-kicker">DTR // CORSAIR BASE NETWORK</p><h2>POB OPERATIONS</h2><p>SELECT YOUR NODE // LIVE LOGISTICS &amp; PRODUCTION</p></div></div>
+      <div class="dtr-pob-launches">
+        <button type="button" data-hub-view="deterrence-sanctum"><small>NODE 01</small><strong>DETERRENCE SANCTUM</strong><span>Maintenance // Stock // Production</span></button>
+        <button type="button" data-hub-view="ravenna-invicta"><small>NODE 02</small><strong>RAVENNA INVICTA</strong><span>Production // Shipyard // Inventory</span></button>
+        <button type="button" data-hub-view="fort-torrelavega"><small>NODE 03</small><strong>FORT TORRELAVEGA</strong><span>Wildcat Gold // Stock // Reserves</span></button>
+      </div>
+    </section>
+    <section id="opsView" class="view" hidden>
+      <div class="dtr-hub-hero"><div><p class="section-kicker">DTR // MISSION UTILITIES</p><h2>OPERATIONS CENTER</h2><p>TRADE INTELLIGENCE // TRANSMISSIONS // BOUNTY CLAIMS</p></div></div>
+      <div class="dtr-hub-grid">
+        <button class="dtr-hub-card" type="button" data-hub-view="trade-routes"><small>OPS 01 // MARKET</small><div><strong>TRADE ROUTES</strong><em>Route planning &amp; profit intelligence</em></div><span class="dtr-hub-arrow" aria-hidden="true">›</span></button>
+        <button class="dtr-hub-card" type="button" data-hub-view="calculator"><small>OPS 02 // PRODUCTION</small><div><strong>CALCULATOR</strong><em>Recipe costs &amp; resource planning</em></div><span class="dtr-hub-arrow" aria-hidden="true">›</span></button>
+        <button class="dtr-hub-card" type="button" data-hub-view="forum"><small>OPS 03 // COMMUNICATION</small><div><strong>FORUM TOOLS</strong><em>BBCode composer &amp; avatar studio</em></div><span class="dtr-hub-arrow" aria-hidden="true">›</span></button>
+        <button class="dtr-hub-card dtr-hub-card--bounty" type="button" data-hub-view="bounty"><small>OPS 04 // COMBAT</small><div><strong>BOUNTY BOARD</strong><em>Kill &amp; piracy claims // evidence</em></div><span class="dtr-hub-arrow" aria-hidden="true">›</span></button>
+      </div>
+    </section>
+    <section id="bountyView" class="view" hidden><div id="bountyRoot"></div></section>
     <section id="overviewView" class="view">
       <div class="network-hero">
         <div class="network-identity">
@@ -347,6 +365,7 @@
   <script src="./dtr-avatar.js"></script>
   <script src="./dtr-quality.js"></script>
   <script src="./dtr-uplink.js"></script>
+  <script src="./dtr-bounty.js"></script>
   <script type="module" src="./dtr-trade-routes.mjs"></script>
 </body>
 </html>

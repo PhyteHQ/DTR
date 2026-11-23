@@ -73,8 +73,8 @@ assert.match(app, /REQUIRED \$\{fmt\(bounds\.min\)\}/, 'equal stock limits must 
 assert.match(html, /class="base-hero-telemetry"/, 'POB health and sync must share the compact hero');
 assert(!html.includes('id="healthValue"'), 'structural integrity must not be duplicated in a stat card');
 assert.match(html, /class="stat-grid compact-stats"[\s\S]*?BASE CREDITS[\s\S]*?FREE STORAGE/, 'compact POB stats must retain credits and storage');
-assert.match(html, /data-view="calculator"[\s\S]*?>CALCULATOR</, 'desktop navigation must expose the calculator');
-assert.match(html, /data-view="trade-routes"/, 'desktop must expose its own Trade Routes workspace');
+assert.match(html, /data-hub-view="calculator"/, 'operations hub must expose the calculator');
+assert.match(html, /data-hub-view="trade-routes"/, 'operations hub must expose Trade Routes');
 assert.match(html, /id="pobTabs"/, 'the POB sub-navigation must exist');
 assert.match(html, /id="tradeRoutesView" class="view dtr-routes-view" hidden/, 'Trade Routes must be a native DTR view');
 assert(sw.includes('./dtr-trade-routes.mjs') && sw.includes('./dtr-route-policy.mjs'), 'trade route controls and faction predictor must work offline');
@@ -99,16 +99,19 @@ assert.match(shipsView,/id="dtrRoutesCustomForm"/,'manual ship profiles must rem
 assert.match(shipsView,/id="dtrRoutesFavorites"/,'quick-favorite ships must be available');
 assert.match(shipsView,/form="dtrRoutesForm"[^>]*id="dtrRoutesCargo"|id="dtrRoutesCargo"[^>]*form="dtrRoutesForm"/,'available cargo outside advanced filters must participate in route form validation');
 assert(app.includes("'trade-routes'"), 'Trade Routes must be a first-class app route');
-assert(quality.includes("short: 'ROUTES'"), 'mobile section navigation must include Trade Routes');
+assert(quality.includes("short: 'OPS'"), 'mobile section navigation must include the operations hub');
 assert(!html.includes('data-view="forja-del-vacio"'), 'retired Forja must remain removed');
 assert.match(html, /id="calculatorView"/, 'calculator workspace must exist');
-assert.match(html, /data-view="forum"/, 'desktop navigation must expose the forum');
+assert.match(html, /data-hub-view="forum"/, 'operations hub must expose the forum');
 assert.match(html, /id="forumView" class="view dtr-forum-view" hidden/, 'forum composer workspace must exist');
 assert(!app.includes('forja-del-vacio'), 'retired Forja must not remain tracked in app');
 assert(!production.includes('forja-del-vacio'), 'retired Forja must not have a production module');
 assert(!html.includes('data-view="forja-del-vacio"'), 'retired Forja must not be navigable');
 assert.equal((html.match(/data-view="(?:deterrence-sanctum|ravenna-invicta|fort-torrelavega)"/g)||[]).length, 3, 'there must be three active base tabs');
 assert(app.includes("'forum', ...POBS.map"), 'forum must be a first-class route');
+assert(html.includes('id="bountyView"') && html.includes('data-hub-view="bounty"'), 'operations hub must expose bounty board');
+assert(sw.includes('./dtr-bounty.js') && sw.includes('./dtr-bounty.css'), 'bounty report generator must be available offline');
+assert(app.includes("'pobs', 'ops', 'bounty'"), 'three-level navigation and bounty view must be routed');
 assert(sw.includes('./dtr-forum.js') && sw.includes('./dtr-forum.css'), 'forum must be cached for offline use');
 assert((await read('dtr-forum.js')).includes('function buildBbcode('), 'forum must generate BBCode');
 assert((await read('dtr-forum.css')).includes('.dtr-forum-render'), 'forum must have styled preview');
@@ -238,8 +241,8 @@ assert.match(calculatorCss, /\.calculator-quote-grid\[data-cards="3"\]\s*{[\s\S]
 assert.match(productionCss, /@media \(max-width: 760px\)[\s\S]*?\.production-command button\s*\{[\s\S]*?min-height:\s*44px/, 'production calculator action must remain touch friendly on phones');
 assert.match(productionCss, /\.production-materials li\s*\{[\s\S]*?grid-template-columns:/, 'production inputs must keep a structured desktop layout');
 assert.match(quality, /id="dtrCalculatorLaunch"/, 'mobile header controls must expose the calculator');
-assert.match(quality, /version:\s*'1\.0\.13'/, 'visible build version must match v1.0.13');
-assert.match(sw, /v1\.0\.13/, 'service-worker cache must match v1.0.13');
+assert.match(quality, /version:\s*'1\.1\.0'/, 'visible build version must match v1.1.0');
+assert.match(sw, /v1\.1\.0/, 'service-worker cache must match v1.1.0');
 assert(html.includes('id="dtrAvatarCanvas"') && html.includes('id="dtrAvatarDownload"'), 'Forum portrait framing must be reachable');
 assert(html.includes('id="dtrForumToolAvatar"') && html.includes('id="dtrForumToolComposer"'),
   'Forum must expose the portrait tool alongside the composer near the top');

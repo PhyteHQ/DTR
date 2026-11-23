@@ -14,7 +14,7 @@ const [html,partial,css,app,quality,route,worker,sw]=await Promise.all([
  ...['index.html','dtr-trade-panel.html','dtr-trade-routes.css','app.js','dtr-quality.js',
    'dtr-trade-routes.mjs','trade-core/worker.mjs','sw.js'].map(p=>readFile(join(root,p),'utf8'))
 ]);
-assert(html.includes('data-view="trade-routes"'),'Trade Routes main section must be navigable');
+assert(html.includes('data-hub-view="trade-routes"'),'Trade Routes must be reachable through OPS');
 assert(html.includes('id="pobTabs"'),'POB network must have own sub navigation');
 assert(html.includes('id="tradeRoutesView"'),'Trade Routes must have own workspace');
 assert(route.includes("fetch('./dtr-trade-panel.html')"),'workspace must lazy load actual DTR styled panel');
@@ -29,7 +29,7 @@ assert(!partial.includes('data-dtr-cargo="freighter-'),'deprecated generic cargo
 assert(!partial.includes('WAYPOINT'),'DTR route workspace must not reuse WAYPOINT branding');
 assert(css.includes('var(--red-bright)')&&css.includes('var(--gold)'),'routes should use established DTR palette');
 assert(css.includes('flex:0 0 auto'),'mobile telemetry must drop original 330px flex basis');
-assert(css.includes('grid-template-columns:repeat(4,minmax(0,1fr))'),'mobile nav must have four main sections');
+assert(html.includes('data-view="ops"'),'mobile main navigation must have an OPS section');
 assert(route.includes('new Worker('),'route searches must run in a worker');
 assert(route.includes("normalizeDarkstat(pobs,commodities)"),'route market data must be normalized');
 assert(route.includes("readJson('npc_bases',{},controller.signal)"),'NPC base endpoint must receive an explicit JSON body');
@@ -57,8 +57,8 @@ assert(route.includes('shipController.mount()'),'ship selector should activate w
 assert(route.includes('returnScope:'),'return mode must be user-changeable');
 assert(route.includes('groupRoutes('),'route variants must be grouped, not dumped as a giant list');
 assert(worker.includes('optimizeTour'),'original WAYPOINT engine must be the calculation core');
-assert(quality.includes("short: 'ROUTES'")&&quality.includes("short: 'POBS'"),'mobile main nav must group categories');
-assert(quality.includes("short: 'CALC'"),'calculator needs own bottom entry');
+assert(quality.includes("short: 'OPS'")&&quality.includes("short: 'POBs'"),'mobile main nav must group categories');
+assert(html.includes('data-hub-view="calculator"'),'calculator must be accessible from the OPS hub');
 assert(sw.includes('./trade-core/worker.mjs'),'PWA must cache trade calculation worker');
 assert(sw.includes('./trade-core/data/navigation.json.gz'),'navigation data should work offline');
 const nav=JSON.parse(gunzipSync(await readFile(join(root,'trade-core/data/navigation.json.gz'))).toString('utf8'));

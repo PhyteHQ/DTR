@@ -162,6 +162,9 @@
 .system-actions { flex-wrap: wrap; }
 .system-actions #dtrDiagnosticsCopy { border-color: rgba(200, 174, 130, 0.28); color: var(--gold); }
 .dtr-mobile-nav { display: none; }
+/* Compact three-destination mobile command strip. */
+@media(max-width:760px){.dtr-mobile-nav{grid-template-columns:repeat(3,minmax(0,1fr))!important}.dtr-mobile-nav button{min-width:0}}
+
 .system-overlay { z-index: 440 !important; }
 .install-sheet { z-index: 460 !important; }
 

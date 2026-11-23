@@ -30,7 +30,7 @@
     { key: 'consumer goods', label: 'Consumer Goods', code: 'GOODS', critical: 2500, warn: 15000 }
   ]);
 
-  const VALID_VIEWS = new Set(['overview', 'trade-routes', 'calculator', 'forum', ...POBS.map(pob => pob.key)]);
+  const VALID_VIEWS = new Set(['overview', 'pobs', 'ops', 'bounty', 'trade-routes', 'calculator', 'forum', ...POBS.map(pob => pob.key)]);
   const numberFormat = new Intl.NumberFormat(LOCALE);
   const $ = id => document.getElementById(id);
   const E = {
@@ -40,6 +40,9 @@
     tabs: $('tabs'),
     pobTabs: $('pobTabs'),
     overview: $('overviewView'),
+    pobsLanding: $('pobsView'),
+    opsLanding: $('opsView'),
+    bounty: $('bountyView'),
     routes: $('tradeRoutesView'),
     calculator: $('calculatorView'),
     forum: $('forumView'),
@@ -825,16 +828,20 @@
     const calculator = view === 'calculator';
     const forum = view === 'forum';
     const routes = view === 'trade-routes';
-    const isPob = view === 'overview' || POBS.some(pob => pob.key === view);
-    const detail = isPob && view !== 'overview';
+    const isPob = view === 'pobs' || POBS.some(pob => pob.key === view);
+    const isOps = ['ops', 'bounty', 'trade-routes', 'calculator', 'forum'].includes(view);
+    const detail = POBS.some(pob => pob.key === view);
     E.overview.hidden = view !== 'overview';
+    E.pobsLanding.hidden = view !== 'pobs';
+    E.opsLanding.hidden = view !== 'ops';
+    E.bounty.hidden = view !== 'bounty';
     E.routes.hidden = !routes;
     E.calculator.hidden = !calculator;
     E.forum.hidden = !forum;
     E.detail.hidden = !detail;
     E.pobTabs.hidden = !isPob;
     E.tabs.querySelectorAll('.tab').forEach(button => {
-      const active = button.dataset.view === (isPob ? 'overview' : view);
+      const active = button.dataset.view === (isPob ? 'pobs' : isOps ? 'ops' : 'overview');
       button.classList.toggle('active', active);
       if (active) button.setAttribute('aria-current', 'page');
       else button.removeAttribute('aria-current');
@@ -1081,6 +1088,12 @@
     const button = event.target.closest('.tab');
     if (button) show(button.dataset.view);
   });
+  for (const panel of [E.pobsLanding, E.opsLanding]) {
+    panel.addEventListener('click', event => {
+      const button = event.target.closest('[data-hub-view]');
+      if (button) show(button.dataset.hubView);
+    });
+  }
   E.pobTabs.addEventListener('click', event => {
     const button = event.target.closest('.pob-tab');
     if (button) show(button.dataset.view);
