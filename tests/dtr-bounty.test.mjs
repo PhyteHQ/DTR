@@ -45,4 +45,19 @@ assert.match(exports.discord(),/Money to Fleet Treasury/);
 assert.match(exports.forum(),/\[color=#c06f6c\]Amount owed and where is the money going to:\[\/color\]/);
 assert.match(exports.forum(),/787,500/);
 assert.match(exports.forum(),/https:\/\/example.org\/id.png/);
+assert(exports.discord().endsWith('/gc DTR Test 787500 DTR Bounties'),
+  'Discord claim must end with the payment command and ungrouped payout digits');
+assert(exports.forum().endsWith('[spoiler=Bounty]/gc DTR Test 787500 DTR Bounties[/spoiler]'),
+  'Forum claim must place payment command inside the bounty spoiler');
+const multiple=runtime({
+ ...draft,character:'Captain Name',entries:[
+  {...base,victim:'First',damage:'61',eventEnabled:false},
+  {...base,victim:'Second',damage:'91',eventEnabled:true,eventType:'flat',eventValue:'1000'}
+ ]
+});
+assert(multiple.discord().endsWith('/gc Captain Name 368500 DTR Bounties'),
+  'The command must use the sum of engagements including special event payouts');
+assert(multiple.forum().endsWith('[spoiler=Bounty]/gc Captain Name 368500 DTR Bounties[/spoiler]'),
+  'The forum command must use the same total as Discord');
+
 console.log('Bounty report and event audit passed.');
