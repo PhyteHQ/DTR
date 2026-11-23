@@ -131,3 +131,15 @@ GitHub Actions checks JavaScript and ES module syntax and runs static, calculato
 ## DTR Help Guide (v1.0.8)
 
 Slimy's DTR Help Guide is available directly from the header HELP / USER GUIDE button, next to SYSTEM and INSTALL. It opens `help/guide.html` in a separate browser tab/window and supports direct section links (`#trade-routes`, `#calculator`, `#forum`, `#avatar`, etc.). The guide provides searchable contents, responsive navigation, and 29 screenshots. Guide and screenshot files are included in the PWA's offline application shell and refresh with UPDATE NOW. The header/navigation screenshot has been refreshed from the current dashboard to include HELP, and its caption, alternative text and header description match the current controls. The remaining 28 original WebP files are unchanged from Slimy's ZIP. The main dashboard features and theme are not modified.
+
+
+## Bounty Board & Operations Center (v1.1.0 preview)
+
+- The three top-level destinations are **OVERVIEW**, **POBs** (with the three POB detail tabs), and **OPS**.
+- OPS groups Trade Routes, Calculator, Forum Tools and a new Bounty Board under one responsive utility hub.
+- Bounty Board supports up to 15 engagements, faction/ship-class/DTR ID bonuses, damage tiers, per-engagement optional event multipliers or flat additions, and an immediate total.
+- Preserves the specified Discord plain-text and Forum BBCode report labels (including `#c06f6c`).
+- Copy exports are fully client-side. Draft fields are saved locally on that device. **No shared claim database, Discord webhook or direct forum posting is configured**; COPY REPORT is intentionally explicit.
+- The displayed faction matrix uses the currently provided 2026 bounty worksheet values; confirm special faction eligibility and damage below 10% before using claims for real payouts.
+- Bounties are not automatically paid or verified; proof links and affiliation evidence must be reviewed by human officers.
+- The service worker cache version is bumped to ship new scripts/styles to installed users after UPDATE NOW.
