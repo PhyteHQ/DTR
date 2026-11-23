@@ -54,7 +54,6 @@
   }
   function formula(e,c){
     let expression='('+short(c.f[2])+' ('+c.f[1].replace(' (pirate transports)','')+') + '+short(c.s[2])+' ('+c.s[1].split(' (')[0]+') + '+short(c.id[2])+' ('+c.id[1]+')) × '+c.factor+' ('+(c.damage===null?0:c.damage)+'%)';
-    if(c.apply)expression=c.eventType==='flat'?expression:expression;
     if(c.apply)expression='('+expression+') '+(e.eventType==='flat'?'+ '+money(c.eventValue):'× '+c.eventValue);
     return expression+' = '+money(c.total);
   }
@@ -91,8 +90,8 @@
       '<button type="button" class="bounty-remove" data-remove="'+e.uid+'"'+(state.entries.length===1?' disabled':'')+' aria-label="Remove engagement '+(i+1)+'">REMOVE</button></header>'+
       '<div class="bounty-fields">'+
       '<label class="bounty-field bounty-wide"><span>Target / victim name</span><input data-field="victim" value="'+escape(e.victim)+'" maxlength="160" placeholder="Character or unnamed target" autocomplete="off"></label>'+
-      '<label class="bounty-field"><span>Enemy affiliation</span><select data-field="faction">'+choice(FACTIONS,e.faction)+'</select></label>'+
-      '<label class="bounty-field"><span>Ship class</span><select data-field="ship">'+choice(SHIPS,e.ship)+'</select></label>'+
+      '<label class="bounty-field"><span>Enemy affiliation <button type="button" class="bounty-info" data-info="rates" aria-label="View faction bounty rates">i</button></span><select data-field="faction">'+choice(FACTIONS,e.faction)+'</select></label>'+
+      '<label class="bounty-field"><span>Ship class <button type="button" class="bounty-info" data-info="ships" aria-label="View ship class bonuses">i</button></span><select data-field="ship">'+choice(SHIPS,e.ship)+'</select></label>'+
       '<label class="bounty-field bounty-wide"><span>Damage dealt (%) <button type="button" class="bounty-info" data-info="damage" aria-label="Damage multiplier information">i</button></span><input type="number" min="0" max="100" step="1" inputmode="numeric" data-field="damage" value="'+escape(e.damage)+'" placeholder="e.g. 61"></label>'+
       '</div><div class="bounty-event"><label class="bounty-event-toggle"><input type="checkbox" data-field="eventEnabled"'+(e.eventEnabled?' checked':'')+'><span>EXCEPTIONAL BOUNTY <small>(EVENT)</small></span></label>'+
       '<div class="bounty-event-body"'+(e.eventEnabled?'':' hidden')+'><div class="bounty-event-grid">'+
@@ -144,7 +143,7 @@
       '<div class="bounty-fields"><label class="bounty-field"><span>Character\'s name</span><input id="bountyCharacter" maxlength="160" placeholder="Your character name"></label>'+
       '<label class="bounty-field"><span>Date</span><input id="bountyDate" type="date"></label>'+
       '<label class="bounty-field"><span>Operation</span><select id="bountyKind"><option value="kill">KILL REPORT</option><option value="piracy">PIRACY REPORT</option></select></label>'+
-      '<label class="bounty-field"><span>Affiliation / ID</span><select id="bountyId">'+choice(IDS,state.id)+'</select></label></div></div>'+
+      '<label class="bounty-field"><span>Affiliation / ID <button type="button" class="bounty-info" data-info="id" aria-label="View ID bonus rates">i</button></span><select id="bountyId">'+choice(IDS,state.id)+'</select></label></div></div>'+
       '<section class="bounty-panel"><div class="bounty-section-title"><span>02 // ENGAGEMENT LOG</span><span class="bounty-mini-counter" id="bountyCount"></span></div><div id="bountyEntries"></div><button type="button" class="bounty-add" id="bountyAdd">+ ADD ANOTHER ENGAGEMENT</button></section>'+
       '<section class="bounty-panel"><div class="bounty-section-title"><span>03 // CLAIM & EVIDENCE</span><button class="bounty-info" type="button" data-info="evidence" aria-label="Evidence help">i</button></div>'+
       '<div class="bounty-fields"><label class="bounty-field bounty-wide"><span>Money to (recipient / account)</span><input id="bountyDestination" maxlength="180" placeholder="Where should the payout go?"></label>'+
@@ -177,7 +176,7 @@
       if(remove&&state.entries.length>1){state.entries=state.entries.filter(e=>e.uid!==Number(remove.dataset.remove));renderEntries();return;}
       if(output){activeOutput=output.dataset.output;updateResults();return;}
       if(info){
-        const help={damage:'Damage multiplier: 0–9% = ×0 (unconfirmed low-damage claims); 10–25% = ×0.25; 26–50% = ×0.5; 51–90% = ×0.75; 91–100% = ×1. Values outside 0–100 are treated as unknown.',identity:'Select the ID displayed on the ship used for this operation. The ID bonus applies to each engagement.',evidence:'Include kill / piracy evidence and a separate screenshot proving the ID used. Links are printed into both report formats. Files are not uploaded by DTR.',posting:'COPY REPORT generates the exact Discord text or Forum BBCode. Automatic posting requires a securely configured server integration and is not enabled.'};
+        const help={rates:'FACTION BOUNTY RATES // '+FACTIONS.map(r=>r[1]+': '+money(r[2])+' cr').join(' // '),ships:'SHIP BONUSES // '+SHIPS.map(r=>r[1]+': '+money(r[2])+' cr').join(' // '),id:'YOUR ID BONUS // '+IDS.map(r=>r[1]+': '+money(r[2])+' cr').join(' // '),damage:'Damage multiplier: 0–9% = ×0 (unconfirmed low-damage claims); 10–25% = ×0.25; 26–50% = ×0.5; 51–90% = ×0.75; 91–100% = ×1. Values outside 0–100 are treated as unknown.',identity:'Select the ID displayed on the ship used for this operation. The ID bonus applies to each engagement.',evidence:'Include kill / piracy evidence and a separate screenshot proving the ID used. Links are printed into both report formats. Files are not uploaded by DTR.',posting:'COPY REPORT generates the exact Discord text or Forum BBCode. Automatic posting requires a securely configured server integration and is not enabled.'};
         const node=$('bountyHelp'),type=info.dataset.info;node.textContent=help[type]||'';node.hidden=!node.hidden&&node.dataset.type===type;node.dataset.type=type;return;
       }
     });
