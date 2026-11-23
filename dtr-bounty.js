@@ -63,6 +63,12 @@
     return 'Event: '+reason+' ('+(e.eventType==='flat'?'+'+money(c.eventValue)+' cr':'×'+c.eventValue)+')';
   }
   function textValue(t){return clean(t).trim()||'—';}
+  // In-game pay command: digits must be contiguous (no grouping separators).
+  function payoutTotal(){return Math.round(state.entries.reduce((sum,e)=>sum+calculate(e).total,0));}
+  function payoutCommand(){
+    const claimant=textValue(state.character).replace(/[\r\n\t]+/g,' ').replace(/\s+/g,' ');
+    return '/gc '+claimant+' '+String(payoutTotal())+' DTR Bounties';
+  }
   function victims(){return state.entries.map(e=>textValue(e.victim)+', '+find(FACTIONS,e.faction)[1]+', '+find(SHIPS,e.ship)[1].split(' (')[0]).join('\n');}
   function claims(){return state.entries.map((e,i)=>{const c=calculate(e);return (state.entries.length>1?'#'+(i+1)+' ':'')+formula(e,c)+(eventLine(e,c)?'\n'+eventLine(e,c):'');}).join('\n')+(state.entries.length>1?'\nTOTAL = '+money(state.entries.reduce((sum,e)=>sum+calculate(e).total,0)):'');}
   function discord(){return [
@@ -72,14 +78,15 @@
     '- Amount owed and where is the money going to:\n'+claims()+'\nMoney to '+textValue(state.destination),
     '- Proof of the kill (links or direct image)\n'+textValue(state.proof),
     '- Visual evidence of affiliation (ID on ship used for the task):\n'+textValue(state.affiliationProof)
-  ].join('\n\n');}
+  ].join('\n\n')+'\n\n'+payoutCommand();}
   function forum(){const label=s=>'[color=#c06f6c]'+s+'[/color]';return [
     label('Character\'s Name:')+' '+textValue(state.character),
     label('Date:')+' '+state.date,
     label('Kills / Piracy victims:')+' '+victims(),
     label('Amount owed and where is the money going to:')+' '+claims()+'\nMoney to '+textValue(state.destination),
     label('Proof (as stated in the requirements):')+' '+textValue(state.proof),
-    label('Visual evidence of affiliation (ID on ship used for the task):')+' '+textValue(state.affiliationProof)
+    label('Visual evidence of affiliation (ID on ship used for the task):')+' '+textValue(state.affiliationProof),
+    '[spoiler=Bounty]'+payoutCommand()+'[/spoiler]'
   ].join('\n');}
   function persist(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch{setStatus('Local draft could not be saved. Copy your report before leaving.','warn');}}
   function setStatus(message,tone='good'){const node=$('bountyFeedback');if(node){node.textContent=message;node.dataset.tone=tone;}}
@@ -115,7 +122,7 @@
       node.querySelector('[data-amount]').innerHTML=money(c.total)+' <span>cr</span>';
       const hint=node.querySelector('[data-event-hint]');if(hint)hint.textContent=c.apply?'EVENT BONUS ACTIVE // INCLUDED IN PAYOUT':'NO VALID EVENT VALUE // STANDARD PAYOUT';
     });
-    $('bountyTotal').textContent=money(total)+' cr';
+    $('bountyTotal').textContent=money(payoutTotal())+' cr';
     $('bountyCount').textContent=state.entries.length+' / 15';
     $('bountyPreview').textContent=activeOutput==='forum'?forum():discord();
     $('bountyPreviewTitle').textContent=activeOutput==='forum'?'FORUM // BBCODE':'DISCORD // PLAIN TEXT';
