@@ -242,7 +242,7 @@ assert.match(productionCss, /@media \(max-width: 760px\)[\s\S]*?\.production-com
 assert.match(productionCss, /\.production-materials li\s*\{[\s\S]*?grid-template-columns:/, 'production inputs must keep a structured desktop layout');
 assert.match(quality, /id="dtrCalculatorLaunch"/, 'mobile header controls must expose the calculator');
 assert.match(quality, /version:\s*'1\.1\.0'/, 'visible build version must match v1.1.0');
-assert.match(sw, /v1\.0\.13/, 'service-worker cache must match v1.0.13');
+assert.match(sw, /v1\.1\.0/, 'service-worker cache must match v1.1.0');
 assert(html.includes('id="dtrAvatarCanvas"') && html.includes('id="dtrAvatarDownload"'), 'Forum portrait framing must be reachable');
 assert(html.includes('id="dtrForumToolAvatar"') && html.includes('id="dtrForumToolComposer"'),
   'Forum must expose the portrait tool alongside the composer near the top');
