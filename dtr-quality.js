@@ -67,10 +67,9 @@
 
   function mobilePobs() {
     return [
-      { view: 'overview', index: '01', short: 'POBS', label: 'POB Network / Overview' },
-      { view: 'trade-routes', index: '02', short: 'ROUTES', label: 'Trade Routes' },
-      { view: 'forum', index: '03', short: 'FORUM', label: 'Forum Transmission Composer' },
-      { view: 'calculator', index: '04', short: 'CALC', label: 'Recipe Cost Calculator' }
+      { view: 'overview', index: '01', short: 'OVERVIEW', label: 'Operational overview' },
+      { view: 'pobs', index: '02', short: 'POBs', label: 'POB operations' },
+      { view: 'ops', index: '03', short: 'OPS', label: 'Operations Center' }
     ];
   }
 
@@ -88,8 +87,9 @@
   function syncMobileNav() {
     const active = appState().view || 'overview';
     document.querySelectorAll('#dtrMobileNav [data-mobile-view]').forEach(button => {
-      const isPob = active === 'overview' || (window.DTRApp?.POBS || []).some(pob => pob.key === active);
-      const selected = button.dataset.mobileView === (isPob ? 'overview' : active);
+      const isPob = active === 'pobs' || (window.DTRApp?.POBS || []).some(pob => pob.key === active);
+      const isOps = ['ops', 'bounty', 'trade-routes', 'calculator', 'forum'].includes(active);
+      const selected = button.dataset.mobileView === (isPob ? 'pobs' : isOps ? 'ops' : 'overview');
       button.classList.toggle('active', selected);
       if (selected) button.setAttribute('aria-current', 'page');
       else button.removeAttribute('aria-current');
