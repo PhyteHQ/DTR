@@ -143,3 +143,10 @@ Slimy's DTR Help Guide is available directly from the header HELP / USER GUIDE b
 - The displayed faction matrix uses the currently provided 2026 bounty worksheet values; confirm special faction eligibility and damage below 10% before using claims for real payouts.
 - Bounties are not automatically paid or verified; proof links and affiliation evidence must be reviewed by human officers.
 - The service worker cache version is bumped to ship new scripts/styles to installed users after UPDATE NOW.
+
+### Ceu's payout-command addition
+
+- The Discord claim ends with `/gc [Character's Name] [total full digits] DTR Bounties`.
+- The Forum BBCode claim ends with `[spoiler=Bounty]/gc [Character's Name] [total full digits] DTR Bounties[/spoiler]`.
+- The total includes all engagements and configured exceptional-event bonuses, with no grouping commas or currency symbol in the actual in-game command.
+- These lines are **copyable commands**, not automatic in-game payments. Confirm the claimant name and final payout before executing them.
